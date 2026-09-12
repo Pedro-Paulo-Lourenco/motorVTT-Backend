@@ -1,0 +1,40 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Testes ainda não configurados\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pedro-Paulo-Lourenco/motorVTT-Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Pedro-Paulo-Lourenco/motorVTT-Backend/issues"
+  },
+  "homepage": "https://github.com/Pedro-Paulo-Lourenco/motorVTT-Backend#readme",
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@motor-vtt/contracts": "github:Pedro-Paulo-Lourenco/vtt-contracts",
+    "express": "^5.2.1",
+    "mysql2": "^3.24.4",
+    "socket.io": "^4.8.3"
+  }
+}
