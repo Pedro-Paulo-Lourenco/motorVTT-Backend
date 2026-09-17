@@ -5,7 +5,12 @@
 ```text
 backend/
 ├── src/
-│   ├── app.ts       # configuração da aplicação Express
+│   ├── config/
+│   │   └── env.ts     # carregamento e validação da configuração
+│   ├── controllers/  # execução dos handlers de domínio
+│   ├── http/         # respostas, erros, validação e middlewares
+│   ├── routes/       # roteadores por recurso
+│   ├── app.ts        # configuração da aplicação Express
 │   └── server.ts    # entrada do processo HTTP
 ├── dist/            # saída gerada pelo TypeScript
 ├── docs/            # documentação e backlog
@@ -16,13 +21,20 @@ backend/
 
 ## Responsabilidades
 
-`src/app.ts` cria e configura a instância do Express. Atualmente, registra o
-middleware `express.json()` e a rota `GET /health`, exportando a aplicação sem
-iniciar o processo HTTP.
+`src/app.ts` cria e configura a instância do Express, registra o parser JSON,
+middlewares HTTP, roteador principal e tratamento final de erros, exportando a
+aplicação sem iniciar o processo HTTP.
 
-`src/server.ts` é o ponto de entrada executável. Ele lê `process.env.PORT`,
-converte o valor para número, aplica o padrão `3000`, valida o intervalo
-permitido e chama `app.listen`.
+As rotas ficam separadas dos controllers. O middleware `validate` executa os
+schemas Zod antes do controller e disponibiliza os resultados em
+`res.locals.validated` com tipos inferidos pelo schema.
+
+`src/config/env.ts` carrega o `.env` com `dotenv`, valida as variáveis com Zod e
+exporta o objeto tipado `env`. Em caso de erro, lista todas as variáveis
+inválidas no stderr e encerra o processo com código `1`.
+
+`src/server.ts` importa a configuração antes da aplicação Express e só chama
+`app.listen` depois que a validação foi concluída.
 
 Essa separação permite importar a aplicação isoladamente em testes sem iniciar
 um servidor real.
@@ -32,8 +44,8 @@ um servidor real.
 ```text
 npm start
   -> dist/server.js
+  -> carrega e valida dist/config/env.js
   -> importa dist/app.js
-  -> lê e valida PORT
   -> inicia app.listen(PORT)
 ```
 

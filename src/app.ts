@@ -1,14 +1,14 @@
 import express from 'express';
 
+import { errorHandler, correlationId, notFound } from './http/middlewares.js';
+import router from './routes/index.js';
+
 const app = express();
 
+app.use(correlationId);
 app.use(express.json());
-
-app.get('/health', (_req, res) => {
-    res.status(200).json({
-        status: 'ok',
-        service: 'backend',
-    });
-});
+app.use(router);
+app.use(notFound);
+app.use(errorHandler);
 
 export default app;

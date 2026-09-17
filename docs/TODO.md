@@ -20,36 +20,36 @@ fundação necessária para cumprir o Sprint 0.
 - [X] Utilizar os mesmos DTOs, enums e schemas definidos para frontend e backend.
 - [X] Incluir os contratos de Usuario, Sala, Participante, Tabuleiro, Cena,
   Token, Asset, SheetTemplate, CharacterSheet e MessageLog.
-- [ ] Validar no backend os payloads conforme os schemas compartilhados.
+- [x] Validar no backend os payloads conforme os schemas compartilhados.
 
 **Aceitação:** frontend e backend validam os mesmos formatos.
 
 ### Ambientes e segredos
 
-- [ ] Configurar `dotenv`.
-- [ ] Criar `.env.example` com API, banco, JWT, cookies, CORS, e-mail, filas e
+- [x] Configurar `dotenv`.
+- [x] Criar `.env.example` com API, banco, JWT, cookies, CORS, e-mail, filas e
   storage.
-- [ ] Validar as variáveis obrigatórias durante a inicialização.
-- [ ] Exibir erro claro quando uma variável obrigatória estiver ausente.
-- [ ] Garantir que arquivos `.env` e segredos não sejam versionados.
+- [x] Validar as variáveis obrigatórias durante a inicialização.
+- [x] Exibir erro claro quando uma variável obrigatória estiver ausente.
+- [x] Garantir que arquivos `.env` e segredos não sejam versionados.
 
 **Aceitação:** o backend não inicia silenciosamente com configuração inválida
 e nenhum segredo entra no repositório.
 
 ### Validação, respostas e erros
 
-- [ ] Padronizar o formato das respostas HTTP de sucesso.
-- [ ] Padronizar o formato das respostas HTTP de erro.
-- [ ] Criar middleware global de tratamento de erros.
-- [ ] Criar middleware para rotas inexistentes (`404`).
-- [ ] Garantir que respostas de erro não exponham stack trace ou dados sensíveis.
+- [x] Padronizar o formato das respostas HTTP de sucesso.
+- [x] Padronizar o formato das respostas HTTP de erro.
+- [x] Criar middleware global de tratamento de erros.
+- [x] Criar middleware para rotas inexistentes (`404`).
+- [x] Garantir que respostas de erro não exponham stack trace ou dados sensíveis.
 
 **Aceitação:** entradas inválidas e erros internos retornam respostas seguras e
 consistentes.
 
 ### Rastreamento e logs
 
-- [ ] Criar e propagar um `correlation_id` por requisição.
+- [x] Criar e propagar um `correlation_id` por requisição.
 - [ ] Configurar logs estruturados.
 - [ ] Garantir que logs não contenham senhas, tokens, cookies ou outros dados
   sensíveis.
