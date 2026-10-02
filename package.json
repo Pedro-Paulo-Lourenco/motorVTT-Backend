@@ -30,6 +30,7 @@
   },
   "homepage": "https://github.com/Pedro-Paulo-Lourenco/motorVTT-Backend#readme",
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
@@ -39,8 +40,9 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@motor-vtt/contracts": "github:Pedro-Paulo-Lourenco/vtt-contracts",
+    "@motor-vtt/contracts": "github:Pedro-Paulo-Lourenco/vtt-contracts#v1.0.1",
     "argon2": "^0.45.1",
+    "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.2",
