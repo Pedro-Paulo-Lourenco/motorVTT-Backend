@@ -33,13 +33,14 @@ const environmentSchema = z.object({
 
     JWT_SECRET: z.preprocess(
         (value) => (value === '' ? undefined : value),
-        z.string().min(32).optional(),
+        z.string().min(32),
     ),
     JWT_EXPIRES_IN: z.string().min(1).default('1d'),
     COOKIE_SECRET: z.preprocess(
         (value) => (value === '' ? undefined : value),
         z.string().min(32).optional(),
     ),
+    REFRESH_TOKEN_EXPIRES_IN: z.string().regex(/^[1-9]\d*[smhd]$/).default('7d'),
 
     SMTP_HOST: z.string().min(1).optional(),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),

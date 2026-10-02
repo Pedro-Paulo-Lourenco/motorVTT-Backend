@@ -35,7 +35,12 @@ async function withServer<T>(application: Express, callback: (baseUrl: string) =
 async function request(
     baseUrl: string,
     path: string,
-    options: { method?: string; body?: string; correlationId?: string } = {},
+    options: {
+        method?: string;
+        body?: string;
+        correlationId?: string;
+        headers?: Record<string, string>;
+    } = {},
 ): Promise<HttpResult> {
     const url = new URL(path, baseUrl);
 
@@ -49,6 +54,7 @@ async function request(
                     ...(options.correlationId === undefined
                         ? {}
                         : { 'x-correlation-id': options.correlationId }),
+                    ...options.headers,
                 },
             },
             (response) => {
@@ -59,10 +65,9 @@ async function request(
                         resolve({
                             statusCode: response.statusCode ?? 0,
                             headers: response.headers,
-                            body: JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<
-                                string,
-                                unknown
-                            >,
+                            body: Buffer.concat(chunks).length === 0
+                                ? {}
+                                : JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>,
                         });
                     } catch (error) {
                         reject(error);
@@ -78,6 +83,24 @@ async function request(
 }
 
 describe('contratos HTTP', () => {
+    it('permite CORS com credenciais para a origem configurada', async () => {
+        await withServer(app, async (baseUrl) => {
+            const response = await request(baseUrl, '/api/auth/login', {
+                method: 'OPTIONS',
+                headers: {
+                    origin: 'http://localhost:5173',
+                    'access-control-request-method': 'POST',
+                    'access-control-request-headers': 'content-type',
+                },
+            });
+
+            assert.equal(response.statusCode, 204);
+            assert.equal(response.headers['access-control-allow-origin'], 'http://localhost:5173');
+            assert.equal(response.headers['access-control-allow-credentials'], 'true');
+            assert.match(response.headers['access-control-allow-methods'] ?? '', /POST/);
+        });
+    });
+
     it('retorna sucesso padronizado e preserva o correlation ID', async () => {
         await withServer(app, async (baseUrl) => {
             const response = await request(baseUrl, '/health', {
