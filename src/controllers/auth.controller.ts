@@ -1,4 +1,5 @@
 import type { CookieOptions, Request, Response } from 'express';
+import { authResponseSchema, type AuthResponse } from '@motor-vtt/contracts';
 
 import { env } from '../config/env.js';
 import { HttpError } from '../http/errors.js';
@@ -10,7 +11,7 @@ import {
     refreshTokenLifetimeMilliseconds,
     verifyAccessToken,
 } from '../services/auth.service.js';
-import type { AuthResponse } from '../types/auth.types.js';
+import type { AuthServiceResponse } from '../types/auth.types.js';
 import type { LoginBody, RegisterBody } from '../routes/auth.schemas.js';
 
 const commonCookieOptions: CookieOptions = {
@@ -19,7 +20,7 @@ const commonCookieOptions: CookieOptions = {
     secure: env.NODE_ENV === 'production',
 };
 
-function writeSessionCookies(res: Response, result: { response: AuthResponse; session: { refreshToken: string } }): void {
+function writeSessionCookies(res: Response, result: { response: AuthServiceResponse; session: { refreshToken: string } }): void {
     res.cookie('access_token', result.response.accessToken, {
         ...commonCookieOptions,
         path: '/',
@@ -43,7 +44,7 @@ export async function register(
 ): Promise<void> {
     const result = await authService.register(res.locals.validated.body);
     writeSessionCookies(res, result);
-    sendSuccess(res, 201, result.response);
+    sendSuccess(res, 201, authResponseSchema.parse({ user: result.response.user }));
 }
 
 export async function login(
@@ -52,7 +53,7 @@ export async function login(
 ): Promise<void> {
     const result = await authService.login(res.locals.validated.body);
     writeSessionCookies(res, result);
-    sendSuccess(res, 200, result.response);
+    sendSuccess(res, 200, authResponseSchema.parse({ user: result.response.user }));
 }
 
 export async function refresh(req: Request, res: Response<ApiResponse<AuthResponse>>): Promise<void> {
@@ -62,14 +63,14 @@ export async function refresh(req: Request, res: Response<ApiResponse<AuthRespon
     }
     const result = await authService.refresh(refreshToken);
     writeSessionCookies(res, result);
-    sendSuccess(res, 200, result.response);
+    sendSuccess(res, 200, authResponseSchema.parse({ user: result.response.user }));
 }
 
 export async function me(req: Request, res: Response<ApiResponse<unknown>>): Promise<void> {
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     const user = await authService.authenticatedUser({ userId: req.user.id, sessionId: req.user.sessionId });
     if (!user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
-    sendSuccess(res, 200, { user });
+    sendSuccess(res, 200, authResponseSchema.parse({ user }));
 }
 
 export async function logout(req: Request, res: Response<ApiResponse<Record<string, never>>>): Promise<void> {

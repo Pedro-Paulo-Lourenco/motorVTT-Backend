@@ -1,14 +1,6 @@
-export type UserStatus = 'PENDENTE' | 'ATIVO' | 'BLOQUEADO';
+import type { User } from '@motor-vtt/contracts';
 
-export type PublicUser = {
-    id: string;
-    nome: string;
-    email: string;
-    status: UserStatus;
-    ultimoLogin: string | null;
-    createdAt: string;
-    updatedAt: string;
-};
+export type PublicUser = User;
 
 export type RegisterInput = {
     nome: string;
@@ -21,7 +13,7 @@ export type LoginInput = {
     password: string;
 };
 
-export type AuthResponse = {
+export type AuthServiceResponse = {
     user: PublicUser;
     accessToken: string;
     accessTokenExpiresAt: string;

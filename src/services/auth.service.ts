@@ -1,6 +1,8 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 import argon2 from 'argon2';
+import bcrypt from 'bcrypt';
+import { userSchema, type UserStatus } from '@motor-vtt/contracts';
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
@@ -8,12 +10,11 @@ import { env } from '../config/env.js';
 import pool from '../config/database.js';
 import { HttpError } from '../http/errors.js';
 import type {
-    AuthResponse,
+    AuthServiceResponse,
     LoginInput,
     PublicUser,
     RefreshSession,
     RegisterInput,
-    UserStatus,
 } from '../types/auth.types.js';
 
 type Queryable = Pool | PoolConnection;
@@ -48,22 +49,30 @@ export type AccessTokenPayload = {
     sessionId: string;
 };
 
-const ARGON2_OPTIONS = {
-    type: argon2.argon2id,
-    memoryCost: 19_456,
-    timeCost: 2,
-    parallelism: 1,
-} as const;
+const BCRYPT_COST = 12;
 
 // Used only to keep unknown-email login attempts computationally comparable.
-const DUMMY_PASSWORD_HASH = '$argon2id$v=19$m=19456,p=1,t=2$BgoRHdpJXwwuehL0bx0aUA$kx/kmCTfeMP4l8fEGu1MUPfgy47OjDtkpjklcjyCWjI';
+const DUMMY_PASSWORD_HASH = '$2b$12$2E6ERKF9l/grbZlE6CzadOvPFfr3AbA/4YfCEqWhj6UKNZ6LD2j3K';
+
+async function hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, BCRYPT_COST);
+}
+
+async function verifyPassword(hash: string, password: string): Promise<boolean> {
+    try {
+        if (hash.startsWith('$argon2id$')) return await argon2.verify(hash, password);
+        return await bcrypt.compare(password, hash);
+    } catch {
+        return false;
+    }
+}
 
 function asIso(value: Date): string {
     return value.toISOString();
 }
 
 function toPublicUser(row: UserRow | SessionRow): PublicUser {
-    return {
+    return userSchema.parse({
         id: row.id,
         nome: row.nome,
         email: row.email,
@@ -71,7 +80,7 @@ function toPublicUser(row: UserRow | SessionRow): PublicUser {
         ultimoLogin: row.ultimo_login === null ? null : asIso(row.ultimo_login),
         createdAt: asIso(row.created_at),
         updatedAt: asIso(row.updated_at),
-    };
+    });
 }
 
 function durationToMilliseconds(value: string): number {
@@ -130,7 +139,7 @@ async function createRefreshSession(connection: Queryable, userId: string): Prom
 }
 
 function createAuthenticationResult(user: PublicUser, session: RefreshSession): {
-    response: AuthResponse;
+    response: AuthServiceResponse;
     session: RefreshSession;
 } {
     const accessTokenExpiresAt = new Date(Date.now() + durationToMilliseconds(env.JWT_EXPIRES_IN));
@@ -182,8 +191,8 @@ export function verifyAccessToken(token: string): AccessTokenPayload | undefined
 export class AuthService {
     public constructor(private readonly database: Pool = pool) {}
 
-    public async register(input: RegisterInput): Promise<{ response: AuthResponse; session: RefreshSession }> {
-        const passwordHash = await argon2.hash(input.password, ARGON2_OPTIONS);
+    public async register(input: RegisterInput): Promise<{ response: AuthServiceResponse; session: RefreshSession }> {
+        const passwordHash = await hashPassword(input.password);
         const connection = await this.database.getConnection();
         try {
             await connection.beginTransaction();
@@ -219,10 +228,11 @@ export class AuthService {
         }
     }
 
-    public async login(input: LoginInput): Promise<{ response: AuthResponse; session: RefreshSession }> {
+    public async login(input: LoginInput): Promise<{ response: AuthServiceResponse; session: RefreshSession }> {
         const candidate = await findUserByEmail(this.database, input.email);
-        const passwordMatches = await argon2.verify(candidate?.password_hash ?? DUMMY_PASSWORD_HASH, input.password)
-            .catch(() => false);
+        const passwordMatches = candidate?.password_hash
+            ? await verifyPassword(candidate.password_hash, input.password)
+            : await bcrypt.compare(input.password, DUMMY_PASSWORD_HASH);
 
         if (!candidate || !candidate.password_hash || !passwordMatches) {
             throw new HttpError(401, 'CREDENTIALS_INVALID', 'Credenciais inválidas.');
@@ -234,6 +244,14 @@ export class AuthService {
         const connection = await this.database.getConnection();
         try {
             await connection.beginTransaction();
+            if (candidate.password_hash.startsWith('$argon2id$')
+                && Buffer.byteLength(input.password, 'utf8') <= 72) {
+                const upgradedHash = await hashPassword(input.password);
+                await connection.query(
+                    'UPDATE user_credentials SET password_hash = ? WHERE user_id = ? AND password_hash = ?',
+                    [upgradedHash, candidate.id, candidate.password_hash],
+                );
+            }
             await connection.query<ResultSetHeader>('UPDATE users SET ultimo_login = CURRENT_TIMESTAMP(3) WHERE id = ?', [candidate.id]);
             const updatedUser = await findUserById(connection, candidate.id);
             if (!updatedUser) throw new Error('Usuário autenticado não encontrado.');
@@ -248,7 +266,7 @@ export class AuthService {
         }
     }
 
-    public async refresh(refreshToken: string): Promise<{ response: AuthResponse; session: RefreshSession }> {
+    public async refresh(refreshToken: string): Promise<{ response: AuthServiceResponse; session: RefreshSession }> {
         const connection = await this.database.getConnection();
         try {
             await connection.beginTransaction();

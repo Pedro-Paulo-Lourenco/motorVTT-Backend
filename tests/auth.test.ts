@@ -6,6 +6,9 @@ import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
 import { after, before, describe, it } from 'node:test';
 
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import argon2 from 'argon2';
+import { apiErrorResponseSchema, apiSuccessSchema, authResponseSchema } from '@motor-vtt/contracts';
 import type { Express } from 'express';
 
 import app from '../src/app.js';
@@ -103,7 +106,7 @@ after(async () => {
 });
 
 describe('autenticação', () => {
-    it('cadastra com hash Argon2, normaliza e-mail e nunca retorna credenciais', async () => {
+    it('cadastra com hash BCrypt, normaliza e-mail e nunca retorna credenciais', async () => {
         await withServer(app, async (baseUrl) => {
             const email = uniqueEmail().toUpperCase();
             const response = await request(baseUrl, '/api/auth/register', {
@@ -116,7 +119,8 @@ describe('autenticação', () => {
             assert.equal(response.body.data.user.nome, 'Alice');
             assert.equal(response.body.data.user.status, 'ATIVO');
             assert.equal(response.body.data.user.ultimoLogin, null);
-            assert.equal(typeof response.body.data.accessToken, 'string');
+            assert.equal(apiSuccessSchema(authResponseSchema).safeParse(response.body).success, true);
+            assert.equal('accessToken' in response.body.data, false);
             assert.doesNotMatch(JSON.stringify(response.body), /password_hash|Senha!DeTeste2026/);
 
             const accessSetCookie = setCookie(response.headers, 'access_token');
@@ -130,8 +134,38 @@ describe('autenticação', () => {
                 `SELECT c.password_hash FROM user_credentials c INNER JOIN users u ON u.id = c.user_id WHERE u.email = ?`,
                 [email.toLowerCase()],
             );
-            assert.match(rows[0]?.password_hash ?? '', /^\$argon2id\$/);
+            assert.match(rows[0]?.password_hash ?? '', /^\$2[aby]\$/);
             assert.notEqual(rows[0]?.password_hash, strongPassword);
+        });
+    });
+
+    it('migra hashes Argon2 antigos para BCrypt após login válido', async () => {
+        await withServer(app, async (baseUrl) => {
+            const email = uniqueEmail();
+            await request(baseUrl, '/api/auth/register', {
+                method: 'POST', body: { nome: 'Alice', email, password: strongPassword },
+            });
+
+            const legacyHash = await argon2.hash(strongPassword);
+            await pool.query(
+                `UPDATE user_credentials c
+                 INNER JOIN users u ON u.id = c.user_id
+                 SET c.password_hash = ?
+                 WHERE u.email = ?`,
+                [legacyHash, email],
+            );
+
+            const login = await request(baseUrl, '/api/auth/login', {
+                method: 'POST', body: { email, password: strongPassword },
+            });
+            assert.equal(login.statusCode, 200);
+
+            const [rows] = await pool.query<Array<{ password_hash: string }>>(
+                `SELECT c.password_hash FROM user_credentials c INNER JOIN users u ON u.id = c.user_id WHERE u.email = ?`,
+                [email],
+            );
+            assert.match(rows[0]?.password_hash ?? '', /^\$2[aby]\$/);
+            assert.equal(await bcrypt.compare(strongPassword, rows[0]?.password_hash ?? ''), true);
         });
     });
 
@@ -142,6 +176,7 @@ describe('autenticação', () => {
                 body: { nome: 'Alice', email: uniqueEmail(), password: 'fraca' },
             });
             assert.equal(weak.statusCode, 422);
+            assert.equal(apiErrorResponseSchema.safeParse(weak.body).success, true);
 
             const email = uniqueEmail();
             const first = await request(baseUrl, '/api/auth/register', {

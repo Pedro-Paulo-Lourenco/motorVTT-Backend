@@ -1,22 +1,10 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import type { ApiErrorResponse as ContractApiErrorResponse, ApiSuccess } from '@motor-vtt/contracts';
 import type { z } from 'zod';
 
-export type ApiSuccessResponse<T> = {
-    success: true;
-    data: T;
-    message?: string;
-    correlationId?: string;
-};
+export type ApiSuccessResponse<T> = ApiSuccess<T>;
 
-export type ApiErrorResponse = {
-    success: false;
-    error: {
-        code: string;
-        message: string;
-        details?: Record<string, unknown>;
-        correlationId?: string;
-    };
-};
+export type ApiErrorResponse = ContractApiErrorResponse;
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
