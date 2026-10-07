@@ -8,6 +8,7 @@ import {
     type ParticipantInput,
     type RoomInput,
 } from '@motor-vtt/contracts';
+import { env } from '../config/env.js';
 import type { Pool, RowDataPacket } from 'mysql2/promise';
 
 import pool from '../config/database.js';
@@ -122,6 +123,28 @@ export class RoomsService {
                     ParticipantRole.MESTRE,
                     JSON.stringify(DEFAULT_VIEW_PREFERENCES),
                 ],
+            );
+            const boardId = randomUUID();
+            const sceneId = randomUUID();
+            await connection.query(
+                `INSERT INTO boards (id, sala_id, nome, cena_ativa_id)
+                 VALUES (?, ?, ?, NULL)`,
+                [boardId, roomId, 'Tabuleiro principal'],
+            );
+            await connection.query(
+                `INSERT INTO scenes (id, tabuleiro_id, nome, background_url, grid_config, visivel)
+                 VALUES (?, ?, ?, ?, ?, TRUE)`,
+                [
+                    sceneId,
+                    boardId,
+                    'Cena principal',
+                    env.TABLETOP_BACKGROUND_URL ?? null,
+                    JSON.stringify({ enabled: true, size: env.TABLETOP_GRID_SIZE, opacity: 0.5 }),
+                ],
+            );
+            await connection.query(
+                'UPDATE boards SET cena_ativa_id = ? WHERE id = ?',
+                [sceneId, boardId],
             );
             const [rows] = await connection.query<RoomRow[]>(
                 `SELECT id, nome, codigo_convite, criador_id, status, created_at, updated_at

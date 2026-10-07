@@ -1,6 +1,9 @@
+import { createServer } from 'node:http';
+
 import { env } from './config/env.js';
 import { checkDatabaseConnection, closeDatabase } from './config/database.js';
 import app from './app.js';
+import { createTabletopGateway } from './realtime/tabletop.gateway.js';
 
 async function startServer(): Promise<void> {
     try {
@@ -13,7 +16,9 @@ async function startServer(): Promise<void> {
         process.exit(1);
     }
 
-    const server = app.listen(env.PORT, () => {
+    const server = createServer(app);
+    const tabletopGateway = createTabletopGateway(server);
+    server.listen(env.PORT, () => {
         console.log(`Backend executando na porta ${env.PORT}`);
     });
 
@@ -25,15 +30,11 @@ async function startServer(): Promise<void> {
 
         console.log(`Sinal ${signal} recebido. Encerrando o backend...`);
 
-        server.close(async (serverError) => {
-            if (serverError) {
-                console.error('Falha ao encerrar o servidor HTTP.', serverError);
-            }
-
+        tabletopGateway.close(async () => {
             try {
                 await closeDatabase();
                 console.log('Pool MySQL encerrado com sucesso.');
-                process.exit(serverError ? 1 : 0);
+                process.exit(0);
             } catch (error) {
                 console.error('Falha ao encerrar o pool MySQL.', error);
                 process.exit(1);

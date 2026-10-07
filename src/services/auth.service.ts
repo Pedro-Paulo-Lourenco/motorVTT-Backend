@@ -49,6 +49,8 @@ export type AccessTokenPayload = {
     sessionId: string;
 };
 
+export type VerifiedAccessTokenPayload = AccessTokenPayload & { expiresAt: number };
+
 const BCRYPT_COST = 12;
 
 // Used only to keep unknown-email login attempts computationally comparable.
@@ -170,7 +172,7 @@ export function refreshTokenLifetimeMilliseconds(): number {
     return durationToMilliseconds(env.REFRESH_TOKEN_EXPIRES_IN);
 }
 
-export function verifyAccessToken(token: string): AccessTokenPayload | undefined {
+export function verifyAccessToken(token: string): VerifiedAccessTokenPayload | undefined {
     try {
         const decoded = jwt.verify(token, env.JWT_SECRET, {
             algorithms: ['HS256'],
@@ -179,10 +181,15 @@ export function verifyAccessToken(token: string): AccessTokenPayload | undefined
         });
         if (typeof decoded === 'string') return undefined;
         const payload = decoded as JwtPayload;
-        if (payload.typ !== 'access' || typeof payload.sub !== 'string' || typeof payload.sid !== 'string') {
+        if (
+            payload.typ !== 'access'
+            || typeof payload.sub !== 'string'
+            || typeof payload.sid !== 'string'
+            || typeof payload.exp !== 'number'
+        ) {
             return undefined;
         }
-        return { userId: payload.sub, sessionId: payload.sid };
+        return { userId: payload.sub, sessionId: payload.sid, expiresAt: payload.exp * 1_000 };
     } catch {
         return undefined;
     }

@@ -52,6 +52,8 @@ const environmentSchema = z.object({
 
     STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
     STORAGE_PATH: z.string().min(1).default('./storage'),
+    TABLETOP_BACKGROUND_URL: optionalUrl,
+    TABLETOP_GRID_SIZE: z.coerce.number().int().positive().default(64),
     S3_BUCKET: optionalNonEmptyString,
     S3_REGION: optionalNonEmptyString,
     S3_ENDPOINT: optionalUrl,

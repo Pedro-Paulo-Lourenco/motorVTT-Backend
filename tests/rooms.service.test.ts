@@ -101,6 +101,9 @@ class FakeDatabase {
                 });
                 return [[], []];
             }
+            if (sql.includes('INSERT INTO boards')) return [[], []];
+            if (sql.includes('INSERT INTO scenes')) return [[], []];
+            if (sql.includes('UPDATE boards SET cena_ativa_id')) return [[], []];
             if (sql.includes('FROM rooms WHERE codigo_convite')) {
                 return [this.rooms.filter((room) => room.codigo_convite === values[0]), []];
             }
