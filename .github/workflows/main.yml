@@ -1,0 +1,53 @@
+name: Build Backend para Deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Verificar tipos TypeScript
+        run: npm run typecheck
+
+      - name: Compilar projeto
+        run: npm run build
+
+      - name: Publicar build no branch dist
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@github.com"
+
+          git remote set-url origin https://x-access-token:${DEPLOY_TOKEN}@github.com/Pedro-Paulo-Lourenco/motorVTT-Backend.git
+
+          if git ls-remote --exit-code --heads origin dist >/dev/null 2>&1; then
+            git fetch origin dist
+            git checkout -B dist origin/dist
+          else
+            git checkout --orphan dist
+          fi
+
+          git rm -rf . --ignore-unmatch || true
+          cp -r dist/. .
+
+          git add -A
+          git commit -m "Deploy build ${{ github.sha }}" || echo "No changes to commit"
+          git push origin HEAD:dist
