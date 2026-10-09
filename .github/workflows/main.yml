@@ -4,6 +4,9 @@ on:
   push:
     branches: [master]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,6 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ github.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -30,13 +34,9 @@ jobs:
         run: npm run build
 
       - name: Publicar build no branch dist
-        env:
-          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "github-actions@github.com"
-
-          git remote set-url origin "https://x-access-token:${DEPLOY_TOKEN}@github.com/Pedro-Paulo-Lourenco/motorVTT-Backend.git"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           if git ls-remote --exit-code --heads origin dist >/dev/null 2>&1; then
             git fetch origin dist
@@ -50,4 +50,4 @@ jobs:
 
           git add -A
           git commit -m "Deploy build ${{ github.sha }}" || echo "No changes to commit"
-          git push origin HEAD:dist
+          git push "https://x-access-token:${{ github.token }}@github.com/Pedro-Paulo-Lourenco/motorVTT-Backend.git" HEAD:dist
