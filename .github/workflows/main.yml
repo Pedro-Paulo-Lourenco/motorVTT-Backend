@@ -36,7 +36,7 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
 
-          git remote set-url origin https://x-access-token:${DEPLOY_TOKEN}@github.com/Pedro-Paulo-Lourenco/motorVTT-Backend.git
+          git remote set-url origin "https://x-access-token:${DEPLOY_TOKEN}@github.com/Pedro-Paulo-Lourenco/motorVTT-Backend.git"
 
           if git ls-remote --exit-code --heads origin dist >/dev/null 2>&1; then
             git fetch origin dist
