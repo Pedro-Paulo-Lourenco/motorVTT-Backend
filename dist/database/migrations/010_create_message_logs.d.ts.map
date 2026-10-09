@@ -1,0 +1,1 @@
+{"version":3,"file":"010_create_message_logs.d.ts","sourceRoot":"","sources":["../../../src/database/migrations/010_create_message_logs.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,YAAY,CAAC;AAE5C,QAAA,MAAM,SAAS,EAAE,SAwBhB,CAAC;eAEa,SAAS"}

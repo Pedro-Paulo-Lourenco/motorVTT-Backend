@@ -1,0 +1,1 @@
+{"version":3,"file":"002_create_rooms.d.ts","sourceRoot":"","sources":["../../../src/database/migrations/002_create_rooms.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,YAAY,CAAC;AAE5C,QAAA,MAAM,SAAS,EAAE,SAsBhB,CAAC;eAEa,SAAS"}

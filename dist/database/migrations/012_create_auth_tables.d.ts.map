@@ -1,0 +1,1 @@
+{"version":3,"file":"012_create_auth_tables.d.ts","sourceRoot":"","sources":["../../../src/database/migrations/012_create_auth_tables.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,YAAY,CAAC;AAE5C,QAAA,MAAM,SAAS,EAAE,SAqChB,CAAC;eAEa,SAAS"}
