@@ -18,6 +18,7 @@ import {
     isDiceExpressionCandidate,
     rollDiceExpression,
 } from '../services/dice-roller.js';
+import { registerSheetSocketHandler } from '../sockets/sheetSocketHandler.js';
 
 const roomJoinSchema = z.strictObject({
     v: z.literal(1),
@@ -264,6 +265,12 @@ export function createTabletopGateway(httpServer: HttpServer): Server<
     }
 
     io.on('connection', (socket) => {
+        registerSheetSocketHandler(socket, io, {
+            getRoomId: (currentSocket) => currentSocket.data.roomId,
+            confirmSession: () => confirmLiveSession(socket),
+            serializeRoom,
+        });
+
         socket.on('tabletop:v1:join', (payload, acknowledge) => {
             void (async () => {
                 const parsed = roomJoinSchema.safeParse(payload);
