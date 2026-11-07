@@ -3,6 +3,7 @@ import { roomSchema, uuidSchema } from '@motor-vtt/contracts';
 
 export const createRoomSchema = z.strictObject({
     nome: roomSchema.shape.nome,
+    templateId: uuidSchema.optional(),
 });
 
 export const joinRoomSchema = z.strictObject({

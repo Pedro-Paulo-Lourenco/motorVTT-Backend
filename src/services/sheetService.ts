@@ -10,7 +10,7 @@ import {
     type SheetFieldsSchema,
     type SheetTemplate,
 } from '@motor-vtt/contracts';
-import type { Pool, PoolConnection, RowDataPacket } from 'mysql2/promise';
+import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 import pool from '../config/database.js';
 import { HttpError } from '../http/errors.js';
@@ -183,6 +183,12 @@ function recalculateValues(template: SheetTemplate, values: JsonRecord): JsonRec
     return values;
 }
 
+export interface UpdateTemplateData {
+    nome?: string | undefined;
+    sistema?: string | null | undefined;
+    camposSchema?: InputSheetFieldsSchema | undefined;
+}
+
 export interface CreateTemplateData {
     usuarioId: string;
     nome: string;
@@ -229,6 +235,69 @@ export class SheetService {
         return this.getTemplateById(id);
     }
 
+    public async listTemplates(userId: string): Promise<SheetTemplate[]> {
+        const [rows] = await this.database.query<TemplateRow[]>(`SELECT id, usuario_id, sala_id, nome, sistema, campos_schema, created_at, updated_at FROM sheet_templates WHERE usuario_id = ? ORDER BY created_at DESC`, [userId]);
+        return rows.map(toTemplate);
+    }
+
+    public async listRoomTemplates(roomId: string, userId: string): Promise<SheetTemplate[]> {
+        const [rows] = await this.database.query<TemplateRow[]>(
+            `SELECT t.id, t.usuario_id, t.sala_id, t.nome, t.sistema, t.campos_schema, t.created_at, t.updated_at
+             FROM room_sheet_templates rst
+             INNER JOIN sheet_templates t ON t.id = rst.template_id
+             INNER JOIN participants p ON p.sala_id = rst.sala_id
+             WHERE rst.sala_id = ? AND p.usuario_id = ? AND p.ativo = TRUE
+             ORDER BY t.created_at DESC`,
+            [roomId, userId],
+        );
+        return rows.map(toTemplate);
+    }
+
+    public async addRoomTemplate(roomId: string, templateId: string, userId: string): Promise<void> {
+        const [templateRows] = await this.database.query<RowDataPacket[]>(
+            `SELECT t.id FROM sheet_templates t WHERE t.id = ? AND t.usuario_id = ?`,
+            [templateId, userId],
+        );
+        if (!templateRows[0]) throw new HttpError(404, 'SHEET_TEMPLATE_NOT_FOUND', 'Template de ficha não encontrado.');
+        const [roomRows] = await this.database.query<RowDataPacket[]>(
+            `SELECT p.sala_id FROM participants p WHERE p.sala_id = ? AND p.usuario_id = ? AND p.papel = 'MESTRE' AND p.ativo = TRUE`,
+            [roomId, userId],
+        );
+        if (!roomRows[0]) throw new HttpError(403, 'ROOM_MASTER_REQUIRED', 'Apenas o Mestre pode configurar a sala.');
+        await this.database.query(
+            `INSERT IGNORE INTO room_sheet_templates (sala_id, template_id) VALUES (?, ?)`,
+            [roomId, templateId],
+        );
+    }
+
+    public async removeRoomTemplate(roomId: string, templateId: string, userId: string): Promise<void> {
+        const [roomRows] = await this.database.query<RowDataPacket[]>(
+            `SELECT p.sala_id FROM participants p WHERE p.sala_id = ? AND p.usuario_id = ? AND p.papel = 'MESTRE' AND p.ativo = TRUE`,
+            [roomId, userId],
+        );
+        if (!roomRows[0]) throw new HttpError(403, 'ROOM_MASTER_REQUIRED', 'Apenas o Mestre pode configurar a sala.');
+        await this.database.query(
+            `DELETE FROM room_sheet_templates WHERE sala_id = ? AND template_id = ?`,
+            [roomId, templateId],
+        );
+    }
+
+    public async updateTemplate(id: string, userId: string, data: UpdateTemplateData): Promise<SheetTemplate> {
+        const [result] = await this.database.query(`UPDATE sheet_templates SET nome = COALESCE(?, nome), sistema = ?, campos_schema = COALESCE(?, campos_schema) WHERE id = ? AND usuario_id = ?`, [data.nome ?? null, data.sistema ?? null, data.camposSchema ? JSON.stringify(normalizeFieldsSchema(data.camposSchema)) : null, id, userId]);
+        if ((result as { affectedRows: number }).affectedRows === 0) throw new HttpError(404, 'SHEET_TEMPLATE_NOT_FOUND', 'Template de ficha não encontrado.');
+        return this.getTemplateById(id);
+    }
+
+    public async deleteTemplate(id: string, userId: string): Promise<void> {
+        try {
+            const [result] = await this.database.query(`DELETE FROM sheet_templates WHERE id = ? AND usuario_id = ?`, [id, userId]);
+            if ((result as { affectedRows: number }).affectedRows === 0) throw new HttpError(404, 'SHEET_TEMPLATE_NOT_FOUND', 'Template de ficha não encontrado.');
+        } catch (error) {
+            if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ER_ROW_IS_REFERENCED_2') throw new HttpError(409, 'SHEET_TEMPLATE_IN_USE', 'Template de ficha está em uso.');
+            throw error;
+        }
+    }
+
     public async getTemplateById(id: string): Promise<SheetTemplate> {
         const [rows] = await this.database.query<TemplateRow[]>(
             `SELECT id, usuario_id, sala_id, nome, sistema, campos_schema, created_at, updated_at
@@ -251,6 +320,24 @@ export class SheetService {
             [id, data.templateId, data.usuarioId, data.salaId ?? null, data.nome, JSON.stringify(values)],
         );
         return this.getSheetById(id, data.usuarioId);
+    }
+
+    public async linkSheetToToken(roomId: string, tokenId: string, sheetId: string, userId: string): Promise<void> {
+        const [masterRows] = await this.database.query<RowDataPacket[]>(
+            `SELECT p.sala_id FROM participants p WHERE p.sala_id = ? AND p.usuario_id = ? AND p.papel = 'MESTRE' AND p.ativo = TRUE`,
+            [roomId, userId],
+        );
+        if (!masterRows[0]) throw new HttpError(403, 'ROOM_MASTER_REQUIRED', 'Apenas o Mestre pode vincular fichas aos tokens.');
+        const [sheetRows] = await this.database.query<RowDataPacket[]>(
+            `SELECT id FROM character_sheets WHERE id = ? AND sala_id = ?`, [sheetId, roomId],
+        );
+        if (!sheetRows[0]) throw new HttpError(404, 'CHARACTER_SHEET_NOT_FOUND', 'Ficha não encontrada nesta sala.');
+        const [result] = await this.database.query<ResultSetHeader>(
+            `UPDATE tokens t INNER JOIN scenes s ON s.id = t.cena_id INNER JOIN boards b ON b.cena_ativa_id = s.id
+             SET t.character_sheet_id = ? WHERE t.id = ? AND b.sala_id = ?`,
+            [sheetId, tokenId, roomId],
+        );
+        if (result.affectedRows === 0) throw new HttpError(404, 'TOKEN_NOT_FOUND', 'Token não encontrado nesta sala.');
     }
 
     public async getCharacterSheetById(sheetId: string, userId: string): Promise<CharacterSheet> {

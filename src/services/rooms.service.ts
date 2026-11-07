@@ -84,7 +84,7 @@ export class RoomsService {
         private readonly inviteCodeGenerator: () => string = generateInviteCode,
     ) {}
 
-    public async createRoom(nome: string, userId: string): Promise<RoomInput> {
+    public async createRoom(nome: string, userId: string, templateId?: string): Promise<RoomInput> {
         const connection = await this.database.getConnection();
         try {
             await connection.beginTransaction();
@@ -110,6 +110,11 @@ export class RoomsService {
 
             if (!inserted) {
                 throw new HttpError(503, 'ROOM_CODE_UNAVAILABLE', 'Não foi possível gerar um código de convite.');
+            }
+
+            if (templateId) {
+                const [templateResult] = await connection.query(`INSERT IGNORE INTO room_sheet_templates (sala_id, template_id) SELECT ?, id FROM sheet_templates WHERE id = ? AND usuario_id = ?`, [roomId, templateId, userId]);
+                if ((templateResult as { affectedRows: number }).affectedRows === 0) throw new HttpError(404, 'SHEET_TEMPLATE_NOT_FOUND', 'Template de ficha não encontrado.');
             }
 
             await connection.query(
