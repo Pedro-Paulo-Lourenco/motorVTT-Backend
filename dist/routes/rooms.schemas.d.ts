@@ -1,6 +1,7 @@
 import { z } from 'zod';
 export declare const createRoomSchema: z.ZodObject<{
     nome: z.ZodString;
+    templateId: z.ZodOptional<z.ZodString>;
 }, z.core.$strict>;
 export declare const joinRoomSchema: z.ZodObject<{
     codigoConvite: z.ZodString;

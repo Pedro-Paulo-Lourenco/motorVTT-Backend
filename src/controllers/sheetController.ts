@@ -5,7 +5,7 @@ import { HttpError } from '../http/errors.js';
 import { sendSuccess } from '../http/response.js';
 import type { ApiResponse, ValidatedLocals } from '../http/types.js';
 import { sheetService } from '../services/sheetService.js';
-import type { CreateSheetBody, CreateTemplateBody, UpdateTemplateBody, RoomTemplateParams, SheetIdParams, UpdateValuesBody, LinkSheetBody, TokenSheetParams } from '../routes/sheetSchemas.js';
+import type { CreateSheetBody, CreateTemplateBody, UpdateTemplateBody, RoomTemplateParams, SheetIdParams, UpdateValuesBody, LinkSheetBody, TokenSheetParams, ImportSheetParams } from '../routes/sheetSchemas.js';
 
 export async function createSheetTemplate(
     req: Request,
@@ -16,10 +16,25 @@ export async function createSheetTemplate(
     sendSuccess(res, 201, await sheetService.createTemplate({
         usuarioId: req.user.id,
         nome: body.nome,
-        camposSchema: body.camposSchema,
+        ...(body.camposSchema === undefined ? {} : { camposSchema: body.camposSchema }),
         ...(body.sistema === undefined ? {} : { sistema: body.sistema }),
         ...(body.salaId === undefined ? {} : { salaId: body.salaId }),
     }));
+}
+
+export async function getUserLibrary(req: Request, res: Response<ApiResponse<{ templates: SheetTemplate[]; sheets: CharacterSheet[] }>>): Promise<void> {
+    if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
+    sendSuccess(res, 200, await sheetService.getUserLibrary(req.user.id));
+}
+
+export async function cloneSheet(req: Request, res: Response<ApiResponse<CharacterSheet>, ValidatedLocals<undefined, undefined, SheetIdParams>>): Promise<void> {
+    if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
+    sendSuccess(res, 201, await sheetService.cloneSheet(res.locals.validated.params.id, req.user.id));
+}
+
+export async function cloneTemplate(req: Request, res: Response<ApiResponse<SheetTemplate>, ValidatedLocals<undefined, undefined, SheetIdParams>>): Promise<void> {
+    if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
+    sendSuccess(res, 201, await sheetService.cloneTemplate(res.locals.validated.params.id, req.user.id));
 }
 
 export async function listSheetTemplates(req: Request, res: Response<ApiResponse<SheetTemplate[]>>): Promise<void> {
@@ -106,4 +121,13 @@ export async function linkSheetToToken(
     const { salaId, tokenId } = res.locals.validated.params;
     await sheetService.linkSheetToToken(salaId, tokenId, res.locals.validated.body.sheetId, req.user.id);
     res.status(204).send();
+}
+
+export async function importCharacterSheet(
+    req: Request,
+    res: Response<ApiResponse<CharacterSheet>, ValidatedLocals<undefined, undefined, ImportSheetParams>>,
+): Promise<void> {
+    if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
+    const { salaId, id } = res.locals.validated.params;
+    sendSuccess(res, 200, await sheetService.importSheetToRoom(id, salaId, req.user.id));
 }

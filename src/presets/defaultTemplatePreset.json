@@ -1,0 +1,21 @@
+{
+  "cabecalho": [],
+  "atributos": [
+    { "id": "forca", "label": "Força", "type": "NUMBER", "required": true },
+    { "id": "destreza", "label": "Destreza", "type": "NUMBER", "required": true },
+    { "id": "constituicao", "label": "Constituição", "type": "NUMBER", "required": true },
+    { "id": "inteligencia", "label": "Inteligência", "type": "NUMBER", "required": true },
+    { "id": "sabedoria", "label": "Sabedoria", "type": "NUMBER", "required": true },
+    { "id": "carisma", "label": "Carisma", "type": "NUMBER", "required": true }
+  ],
+  "recursos": [
+    { "id": "vida", "label": "Vida", "type": "RESOURCE", "required": true },
+    { "id": "mana", "label": "Mana", "type": "RESOURCE", "required": true }
+  ],
+  "pericias": [
+    { "id": "atletismo", "label": "Atletismo", "type": "FORMULA", "formula": "@forca + 2", "required": false, "attributeId": "forca" },
+    { "id": "furtividade", "label": "Furtividade", "type": "FORMULA", "formula": "@destreza + 2", "required": false, "attributeId": "destreza" },
+    { "id": "resistencia", "label": "Resistência", "type": "FORMULA", "formula": "floor((@forca + @constituicao) / 2)", "required": false, "attributeId": "constituicao" },
+    { "id": "percepcao", "label": "Percepção", "type": "FORMULA", "formula": "max(@sabedoria, @inteligencia) + 1", "required": false, "attributeId": "sabedoria" }
+  ]
+}

@@ -46,7 +46,7 @@ export class RoomsService {
         this.database = database;
         this.inviteCodeGenerator = inviteCodeGenerator;
     }
-    async createRoom(nome, userId) {
+    async createRoom(nome, userId, templateId) {
         const connection = await this.database.getConnection();
         try {
             await connection.beginTransaction();
@@ -69,6 +69,11 @@ export class RoomsService {
             }
             if (!inserted) {
                 throw new HttpError(503, 'ROOM_CODE_UNAVAILABLE', 'Não foi possível gerar um código de convite.');
+            }
+            if (templateId) {
+                const [templateResult] = await connection.query(`INSERT IGNORE INTO room_sheet_templates (sala_id, template_id) SELECT ?, id FROM sheet_templates WHERE id = ? AND usuario_id = ?`, [roomId, templateId, userId]);
+                if (templateResult.affectedRows === 0)
+                    throw new HttpError(404, 'SHEET_TEMPLATE_NOT_FOUND', 'Template de ficha não encontrado.');
             }
             await connection.query(`INSERT INTO participants
                     (id, sala_id, usuario_id, papel, preferencias_view)

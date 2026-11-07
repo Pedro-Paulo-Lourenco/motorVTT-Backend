@@ -1,8 +1,14 @@
 import { randomUUID } from 'node:crypto';
+import defaultTemplatePreset from '../presets/defaultTemplatePreset.json' with { type: 'json' };
 
 import {
     ParticipantRole,
     SheetFieldType,
+    detectCircularDependencies,
+    evaluateFormula,
+    extractFormulaReferences,
+    validateFormula,
+    sheetFieldsSchema,
     sheetTemplateSchema,
     type CharacterSheet,
     type JsonObject,
@@ -14,10 +20,6 @@ import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql
 
 import pool from '../config/database.js';
 import { HttpError } from '../http/errors.js';
-import {
-    detectCircularDependencies,
-    evaluateFormula,
-} from './formulaParser.js';
 
 type JsonRecord = Record<string, unknown>;
 type InputSheetField = Omit<SheetField, 'formula' | 'required' | 'attributeId'> & {
@@ -34,7 +36,7 @@ type InputSheetFieldsSchema = {
 
 type TemplateRow = RowDataPacket & {
     id: string;
-    usuario_id: string | null;
+    usuario_id: string;
     sala_id: string | null;
     nome: string;
     sistema: string | null;
@@ -165,14 +167,20 @@ function recalculateValues(template: SheetTemplate, values: JsonRecord): JsonRec
             throw new HttpError(422, 'CIRCULAR_FORMULA_DEPENDENCY', 'O template contém referências circulares.');
         }
         visiting.add(field.id);
-        const dependencies = [...(field.formula?.matchAll(/@([A-Za-z_][A-Za-z0-9_]*)/g) ?? [])]
-            .map((match) => match[1])
-            .filter((id): id is string => id !== undefined);
+        const dependencies = extractFormulaReferences(field.formula);
         for (const dependency of dependencies) {
             const dependencyField = formulasById.get(dependency);
             if (dependencyField) calculate(dependencyField);
         }
-        const result = evaluateFormula(field.formula ?? '', calculated);
+        let result: number;
+        try {
+            result = evaluateFormula(field.formula ?? '', calculated);
+        } catch (error) {
+            if (error instanceof Error && 'code' in error) {
+                throw new HttpError(422, String(error.code), error.message);
+            }
+            throw error;
+        }
         calculated[field.id] = result;
         values[field.id] = result;
         visiting.delete(field.id);
@@ -183,6 +191,26 @@ function recalculateValues(template: SheetTemplate, values: JsonRecord): JsonRec
     return values;
 }
 
+function validateTemplateFields(fields: SheetField[]): void {
+    const ids = new Set(fields.map((field) => field.id));
+    for (const field of fields) {
+        if (!field.formula) continue;
+        const result = validateFormula(field.formula, ids);
+        if (!result.valid) {
+            const formulaError = result.error;
+            throw new HttpError(
+                422,
+                formulaError?.code ?? 'INVALID_FORMULA',
+                `Fórmula inválida no campo "${field.label}": ${formulaError?.message ?? 'revise a expressão.'}`,
+            );
+        }
+    }
+    const cycle = fields.length > 0 && detectCircularDependencies(fields);
+    if (cycle) {
+        throw new HttpError(422, 'CIRCULAR_FORMULA_DEPENDENCY', 'O template contém referências circulares.');
+    }
+}
+
 export interface UpdateTemplateData {
     nome?: string | undefined;
     sistema?: string | null | undefined;
@@ -191,10 +219,10 @@ export interface UpdateTemplateData {
 
 export interface CreateTemplateData {
     usuarioId: string;
-    nome: string;
+    nome?: string;
     sistema?: string | null;
     salaId?: string | null;
-    camposSchema: InputSheetFieldsSchema;
+    camposSchema?: InputSheetFieldsSchema;
 }
 
 export interface CreateSheetData {
@@ -215,22 +243,20 @@ export class SheetService {
     public constructor(private readonly database: Pool = pool) {}
 
     public async createTemplate(data: CreateTemplateData): Promise<SheetTemplate> {
-        const camposSchema = normalizeFieldsSchema(data.camposSchema);
+        const camposSchema = normalizeFieldsSchema(data.camposSchema ?? sheetFieldsSchema.parse(defaultTemplatePreset));
         const templateFields = [
             ...camposSchema.cabecalho,
             ...camposSchema.atributos,
             ...camposSchema.recursos,
             ...camposSchema.pericias,
         ];
-        if (detectCircularDependencies(templateFields)) {
-            throw new HttpError(422, 'CIRCULAR_FORMULA_DEPENDENCY', 'O template contém referências circulares.');
-        }
+        validateTemplateFields(templateFields);
         const id = randomUUID();
         await this.database.query(
             `INSERT INTO sheet_templates
                 (id, usuario_id, sala_id, nome, sistema, campos_schema)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [id, data.usuarioId, data.salaId ?? null, data.nome, data.sistema ?? null, JSON.stringify(camposSchema)],
+            [id, data.usuarioId, data.salaId ?? null, data.nome ?? 'Template Padrão', data.sistema ?? null, JSON.stringify(camposSchema)],
         );
         return this.getTemplateById(id);
     }
@@ -238,6 +264,30 @@ export class SheetService {
     public async listTemplates(userId: string): Promise<SheetTemplate[]> {
         const [rows] = await this.database.query<TemplateRow[]>(`SELECT id, usuario_id, sala_id, nome, sistema, campos_schema, created_at, updated_at FROM sheet_templates WHERE usuario_id = ? ORDER BY created_at DESC`, [userId]);
         return rows.map(toTemplate);
+    }
+
+    public async getUserLibrary(userId: string): Promise<{ templates: SheetTemplate[]; sheets: CharacterSheet[] }> {
+        const [templateRows] = await this.database.query<TemplateRow[]>(
+            `SELECT id, usuario_id, sala_id, nome, sistema, campos_schema, created_at, updated_at
+             FROM sheet_templates WHERE usuario_id = ? ORDER BY created_at DESC`,
+            [userId],
+        );
+        const [sheetRows] = await this.database.query<SheetRow[]>(
+            `SELECT id, template_id, usuario_id, sala_id, nome, dados_preenchidos, versao, created_at, updated_at
+             FROM character_sheets WHERE usuario_id = ? ORDER BY created_at DESC`,
+            [userId],
+        );
+        return { templates: templateRows.map(toTemplate), sheets: sheetRows.map(toSheet) };
+    }
+
+    public async cloneTemplate(templateId: string, userId: string): Promise<SheetTemplate> {
+        const source = await this.getTemplateById(templateId);
+        return this.createTemplate({
+            usuarioId: userId,
+            nome: `${source.nome} (Cópia)`.slice(0, 160),
+            ...(source.sistema === null || source.sistema === undefined ? {} : { sistema: source.sistema }),
+            camposSchema: source.camposSchema,
+        });
     }
 
     public async listRoomTemplates(roomId: string, userId: string): Promise<SheetTemplate[]> {
@@ -283,6 +333,21 @@ export class SheetService {
     }
 
     public async updateTemplate(id: string, userId: string, data: UpdateTemplateData): Promise<SheetTemplate> {
+        if (data.camposSchema) {
+            validateTemplateFields([
+                ...data.camposSchema.cabecalho,
+                ...data.camposSchema.atributos,
+                ...data.camposSchema.recursos,
+                ...data.camposSchema.pericias,
+            ].map((field) => ({
+                id: field.id,
+                label: field.label,
+                type: field.type,
+                ...(field.formula === undefined ? {} : { formula: field.formula }),
+                ...(field.required === undefined ? {} : { required: field.required }),
+                ...(field.attributeId === undefined ? {} : { attributeId: field.attributeId }),
+            })));
+        }
         const [result] = await this.database.query(`UPDATE sheet_templates SET nome = COALESCE(?, nome), sistema = ?, campos_schema = COALESCE(?, campos_schema) WHERE id = ? AND usuario_id = ?`, [data.nome ?? null, data.sistema ?? null, data.camposSchema ? JSON.stringify(normalizeFieldsSchema(data.camposSchema)) : null, id, userId]);
         if ((result as { affectedRows: number }).affectedRows === 0) throw new HttpError(404, 'SHEET_TEMPLATE_NOT_FOUND', 'Template de ficha não encontrado.');
         return this.getTemplateById(id);
@@ -322,12 +387,40 @@ export class SheetService {
         return this.getSheetById(id, data.usuarioId);
     }
 
+    public async cloneSheet(sheetId: string, userId: string): Promise<CharacterSheet> {
+        const source = await this.getCharacterSheetById(sheetId, userId);
+        return this.createSheet({
+            usuarioId: userId,
+            templateId: source.templateId,
+            nome: `${source.nome} (Cópia)`.slice(0, 160),
+            dadosPreenchidos: objectValue(source.dadosPreenchidos),
+        });
+    }
+
+    public async importSheetToRoom(sheetId: string, roomId: string, userId: string): Promise<CharacterSheet> {
+        const [membership] = await this.database.query<RowDataPacket[]>(
+            `SELECT id FROM participants WHERE sala_id = ? AND usuario_id = ? AND ativo = TRUE`,
+            [roomId, userId],
+        );
+        if (!membership[0]) throw new HttpError(403, 'ROOM_ACCESS_DENIED', 'Você não participa desta sala.');
+        const [result] = await this.database.query<ResultSetHeader>(
+            `UPDATE character_sheets SET sala_id = ? WHERE id = ? AND usuario_id = ?`,
+            [roomId, sheetId, userId],
+        );
+        if (result.affectedRows === 0) throw new HttpError(404, 'CHARACTER_SHEET_NOT_FOUND', 'Ficha de personagem não encontrada.');
+        return this.getSheetById(sheetId, userId);
+    }
+
     public async linkSheetToToken(roomId: string, tokenId: string, sheetId: string, userId: string): Promise<void> {
         const [masterRows] = await this.database.query<RowDataPacket[]>(
             `SELECT p.sala_id FROM participants p WHERE p.sala_id = ? AND p.usuario_id = ? AND p.papel = 'MESTRE' AND p.ativo = TRUE`,
             [roomId, userId],
         );
-        if (!masterRows[0]) throw new HttpError(403, 'ROOM_MASTER_REQUIRED', 'Apenas o Mestre pode vincular fichas aos tokens.');
+        const [ownerRows] = await this.database.query<RowDataPacket[]>(
+            `SELECT id FROM character_sheets WHERE id = ? AND usuario_id = ? AND sala_id = ?`,
+            [sheetId, userId, roomId],
+        );
+        if (!masterRows[0] && !ownerRows[0]) throw new HttpError(403, 'ROOM_MASTER_REQUIRED', 'Apenas o Mestre ou dono da ficha pode vinculá-la.');
         const [sheetRows] = await this.database.query<RowDataPacket[]>(
             `SELECT id FROM character_sheets WHERE id = ? AND sala_id = ?`, [sheetId, roomId],
         );

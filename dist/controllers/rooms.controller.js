@@ -4,7 +4,7 @@ import { roomsService } from '../services/rooms.service.js';
 export async function createRoom(req, res) {
     if (!req.user)
         throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
-    const room = await roomsService.createRoom(res.locals.validated.body.nome, req.user.id);
+    const room = await roomsService.createRoom(res.locals.validated.body.nome, req.user.id, res.locals.validated.body.templateId);
     sendSuccess(res, 201, room);
 }
 export async function listRooms(req, res) {

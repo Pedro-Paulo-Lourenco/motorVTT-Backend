@@ -6,6 +6,7 @@ import { HttpError } from '../http/errors.js';
 import { authService, verifyAccessToken } from '../services/auth.service.js';
 import { tabletopService, tokenCreateSchema, } from '../services/tabletop.service.js';
 import { DiceSyntaxError, isDiceExpressionCandidate, rollDiceExpression, } from '../services/dice-roller.js';
+import { registerSheetSocketHandler } from '../sockets/sheetSocketHandler.js';
 const roomJoinSchema = z.strictObject({
     v: z.literal(1),
     roomId: uuidSchema,
@@ -167,6 +168,11 @@ export function createTabletopGateway(httpServer) {
         return user !== undefined;
     }
     io.on('connection', (socket) => {
+        registerSheetSocketHandler(socket, io, {
+            getRoomId: (currentSocket) => currentSocket.data.roomId,
+            confirmSession: () => confirmLiveSession(socket),
+            serializeRoom,
+        });
         socket.on('tabletop:v1:join', (payload, acknowledge) => {
             void (async () => {
                 const parsed = roomJoinSchema.safeParse(payload);
