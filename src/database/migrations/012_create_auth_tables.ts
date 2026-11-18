@@ -1,8 +1,11 @@
+/** Cria credenciais e sessões necessárias à autenticação. */
+// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
 import type { Migration } from './types.js';
 
 const migration: Migration = {
     name: '012_create_auth_tables',
     async up(connection) {
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query(`
             CREATE TABLE user_credentials (
                 user_id CHAR(36) NOT NULL,
@@ -15,6 +18,7 @@ const migration: Migration = {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
 
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query(`
             CREATE TABLE auth_sessions (
                 id CHAR(36) NOT NULL,
@@ -34,7 +38,9 @@ const migration: Migration = {
         `);
     },
     async down(connection) {
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query('DROP TABLE auth_sessions');
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query('DROP TABLE user_credentials');
     },
 };

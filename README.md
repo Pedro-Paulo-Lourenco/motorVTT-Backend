@@ -11,6 +11,7 @@ e Socket.IO para estado e presença em tempo real.
 | Assunto | Documentação |
 | --- | --- |
 | Arquitetura e fluxo de inicialização | [Arquitetura](docs/architecture.md) |
+| Referência completa de funcionamento, dados e eventos | [Referência técnica](docs/backend-reference.md) |
 | Instalação, scripts e configuração | [Desenvolvimento](docs/development.md) |
 | Aplicação HTTP e endpoint de saúde | [HTTP e health check](docs/http.md) |
 | Contratos compartilhados | [Contratos](docs/contracts.md) |

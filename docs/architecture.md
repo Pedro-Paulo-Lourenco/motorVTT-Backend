@@ -56,3 +56,6 @@ não inicia o servidor.
 
 O projeto usa TypeScript compilado para módulos ESM. Os imports no código-fonte
 utilizam a extensão `.js`, compatível com o resultado gerado em `dist/`.
+
+Para a referência detalhada de endpoints, modelo de dados, autenticação,
+eventos Socket.IO e operação, consulte [backend-reference.md](backend-reference.md).

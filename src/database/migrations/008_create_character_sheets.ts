@@ -1,8 +1,11 @@
+/** Cria fichas de personagem e seus valores estruturados. */
+// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
 import type { Migration } from './types.js';
 
 const migration: Migration = {
     name: '008_create_character_sheets',
     async up(connection) {
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query(`
             CREATE TABLE character_sheets (
                 id CHAR(36) NOT NULL,
@@ -27,6 +30,7 @@ const migration: Migration = {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
     },
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
     async down(connection) { await connection.query('DROP TABLE character_sheets'); },
 };
 
