@@ -6,8 +6,7 @@ import { request as httpRequest, type IncomingHttpHeaders } from 'node:http';
 import { after, before, describe, it } from 'node:test';
 
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import argon2 from 'argon2';
+import bcrypt from 'bcryptjs';
 import { apiErrorResponseSchema, apiSuccessSchema, authResponseSchema } from '@motor-vtt/contracts';
 import type { Express } from 'express';
 
@@ -139,35 +138,6 @@ describe('autenticação', () => {
         });
     });
 
-    it('migra hashes Argon2 antigos para BCrypt após login válido', async () => {
-        await withServer(app, async (baseUrl) => {
-            const email = uniqueEmail();
-            await request(baseUrl, '/api/auth/register', {
-                method: 'POST', body: { nome: 'Alice', email, password: strongPassword },
-            });
-
-            const legacyHash = await argon2.hash(strongPassword);
-            await pool.query(
-                `UPDATE user_credentials c
-                 INNER JOIN users u ON u.id = c.user_id
-                 SET c.password_hash = ?
-                 WHERE u.email = ?`,
-                [legacyHash, email],
-            );
-
-            const login = await request(baseUrl, '/api/auth/login', {
-                method: 'POST', body: { email, password: strongPassword },
-            });
-            assert.equal(login.statusCode, 200);
-
-            const [rows] = await pool.query<Array<{ password_hash: string }>>(
-                `SELECT c.password_hash FROM user_credentials c INNER JOIN users u ON u.id = c.user_id WHERE u.email = ?`,
-                [email],
-            );
-            assert.match(rows[0]?.password_hash ?? '', /^\$2[aby]\$/);
-            assert.equal(await bcrypt.compare(strongPassword, rows[0]?.password_hash ?? ''), true);
-        });
-    });
 
     it('rejeita senha fraca e e-mail duplicado', async () => {
         await withServer(app, async (baseUrl) => {

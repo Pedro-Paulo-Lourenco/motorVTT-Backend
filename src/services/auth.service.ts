@@ -1,7 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
-import argon2 from 'argon2';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { userSchema, type UserStatus } from '@motor-vtt/contracts';
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
@@ -62,7 +61,6 @@ async function hashPassword(password: string): Promise<string> {
 
 async function verifyPassword(hash: string, password: string): Promise<boolean> {
     try {
-        if (hash.startsWith('$argon2id$')) return await argon2.verify(hash, password);
         return await bcrypt.compare(password, hash);
     } catch {
         return false;
@@ -251,14 +249,6 @@ export class AuthService {
         const connection = await this.database.getConnection();
         try {
             await connection.beginTransaction();
-            if (candidate.password_hash.startsWith('$argon2id$')
-                && Buffer.byteLength(input.password, 'utf8') <= 72) {
-                const upgradedHash = await hashPassword(input.password);
-                await connection.query(
-                    'UPDATE user_credentials SET password_hash = ? WHERE user_id = ? AND password_hash = ?',
-                    [upgradedHash, candidate.id, candidate.password_hash],
-                );
-            }
             await connection.query<ResultSetHeader>('UPDATE users SET ultimo_login = CURRENT_TIMESTAMP(3) WHERE id = ?', [candidate.id]);
             const updatedUser = await findUserById(connection, candidate.id);
             if (!updatedUser) throw new Error('Usuário autenticado não encontrado.');
