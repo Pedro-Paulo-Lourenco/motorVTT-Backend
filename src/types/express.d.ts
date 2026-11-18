@@ -1,15 +1,15 @@
 /** Amplia os tipos do Express com o usuário autenticado da requisição. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import type { AuthenticatedRequestUser } from '../http/types.js';
 
 declare global {
     namespace Express {
-// Tipo: `Request` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `Request` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
         interface Request {
             user?: AuthenticatedRequestUser;
         }
     }
 }
 
-// Encerramento do módulo: reexporta ou torna públicas somente as interfaces escolhidas.
+// Encerramento do módulo: mantém a API do módulo restrita às interfaces que precisam ser consumidas externamente.
 export {};

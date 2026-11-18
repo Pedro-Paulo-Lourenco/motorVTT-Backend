@@ -1,31 +1,31 @@
 /** Expõe os tipos de autenticação compartilhados pelos serviços HTTP. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import type { User } from '@motor-vtt/contracts';
 
-// Exportação principal: `PublicUser` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `PublicUser` define a interface pública consumida pelos demais módulos.
 export type PublicUser = User;
 
-// Exportação principal: `RegisterInput` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `RegisterInput` define a interface pública consumida pelos demais módulos.
 export type RegisterInput = {
     nome: string;
     email: string;
     password: string;
 };
 
-// Exportação principal: `LoginInput` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `LoginInput` define a interface pública consumida pelos demais módulos.
 export type LoginInput = {
     email: string;
     password: string;
 };
 
-// Exportação principal: `AuthServiceResponse` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `AuthServiceResponse` define a interface pública consumida pelos demais módulos.
 export type AuthServiceResponse = {
     user: PublicUser;
     accessToken: string;
     accessTokenExpiresAt: string;
 };
 
-// Exportação principal: `RefreshSession` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `RefreshSession` define a interface pública consumida pelos demais módulos.
 export type RefreshSession = {
     id: string;
     userId: string;

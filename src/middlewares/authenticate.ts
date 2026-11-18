@@ -1,38 +1,38 @@
 /** Autentica access tokens e anexa o usuário à requisição Express. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import type { RequestHandler } from 'express';
 
 import { HttpError } from '../http/errors.js';
 import { authService, verifyAccessToken } from '../services/auth.service.js';
 
-// Bloco local: `readAccessToken` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `readAccessToken` isola uma responsabilidade reutilizada neste módulo.
 function readAccessToken(header: string | undefined, cookie: unknown): string | undefined {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (header !== undefined) {
-// Constante ou estado local: `match` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `match` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const match = /^Bearer\s+(.+)$/i.exec(header.trim());
         return match?.[1];
     }
     return typeof cookie === 'string' ? cookie : undefined;
 }
 
-// Exportação principal: `authenticate` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `authenticate` define a interface pública consumida pelos demais módulos.
 export const authenticate: RequestHandler = async (req, _res, next) => {
-// Constante ou estado local: `token` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `token` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const token = readAccessToken(req.header('authorization'), req.cookies?.access_token);
-// Constante ou estado local: `payload` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `payload` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const payload = token === undefined ? undefined : verifyAccessToken(token);
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!payload) {
         next(new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.'));
         return;
     }
 
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
     try {
-// Constante ou estado local: `user` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `user` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const user = await authService.authenticatedUser(payload);
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (!user) {
             next(new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.'));
             return;

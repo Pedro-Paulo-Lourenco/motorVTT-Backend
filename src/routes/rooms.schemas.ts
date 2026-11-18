@@ -1,27 +1,27 @@
 /** Define os schemas de entrada usados pelas operações de salas. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import { z } from 'zod';
 import { roomSchema, uuidSchema } from '@motor-vtt/contracts';
 
-// Exportação principal: `createRoomSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `createRoomSchema` define a interface pública consumida pelos demais módulos.
 export const createRoomSchema = z.strictObject({
     nome: roomSchema.shape.nome,
     templateId: uuidSchema.optional(),
 });
 
-// Exportação principal: `joinRoomSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `joinRoomSchema` define a interface pública consumida pelos demais módulos.
 export const joinRoomSchema = z.strictObject({
     codigoConvite: roomSchema.shape.codigoConvite,
 });
 
-// Exportação principal: `roomIdParamsSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `roomIdParamsSchema` define a interface pública consumida pelos demais módulos.
 export const roomIdParamsSchema = z.strictObject({
     salaId: uuidSchema,
 });
 
-// Exportação principal: `CreateRoomBody` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `CreateRoomBody` define a interface pública consumida pelos demais módulos.
 export type CreateRoomBody = z.infer<typeof createRoomSchema>;
-// Exportação principal: `JoinRoomBody` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `JoinRoomBody` define a interface pública consumida pelos demais módulos.
 export type JoinRoomBody = z.infer<typeof joinRoomSchema>;
-// Exportação principal: `RoomIdParams` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `RoomIdParams` define a interface pública consumida pelos demais módulos.
 export type RoomIdParams = z.infer<typeof roomIdParamsSchema>;

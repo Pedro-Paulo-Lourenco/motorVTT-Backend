@@ -1,5 +1,5 @@
 /** Controla templates e fichas e delega suas regras ao serviço de domínio. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import type { Request, Response } from 'express';
 import type { CharacterSheet, SheetTemplate } from '@motor-vtt/contracts';
 
@@ -13,9 +13,9 @@ export async function createSheetTemplate(
     req: Request,
     res: Response<ApiResponse<SheetTemplate>, ValidatedLocals<CreateTemplateBody, undefined, undefined>>,
 ): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
-// Constante ou estado local: `body` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `body` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const body = res.locals.validated.body;
     sendSuccess(res, 201, await sheetService.createTemplate({
         usuarioId: req.user.id,
@@ -27,57 +27,57 @@ export async function createSheetTemplate(
 }
 
 export async function getUserLibrary(req: Request, res: Response<ApiResponse<{ templates: SheetTemplate[]; sheets: CharacterSheet[] }>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     sendSuccess(res, 200, await sheetService.getUserLibrary(req.user.id));
 }
 
 export async function cloneSheet(req: Request, res: Response<ApiResponse<CharacterSheet>, ValidatedLocals<undefined, undefined, SheetIdParams>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     sendSuccess(res, 201, await sheetService.cloneSheet(res.locals.validated.params.id, req.user.id));
 }
 
 export async function cloneTemplate(req: Request, res: Response<ApiResponse<SheetTemplate>, ValidatedLocals<undefined, undefined, SheetIdParams>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     sendSuccess(res, 201, await sheetService.cloneTemplate(res.locals.validated.params.id, req.user.id));
 }
 
 export async function listSheetTemplates(req: Request, res: Response<ApiResponse<SheetTemplate[]>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     sendSuccess(res, 200, await sheetService.listTemplates(req.user.id));
 }
 
 export async function updateSheetTemplate(req: Request, res: Response<ApiResponse<SheetTemplate>, ValidatedLocals<UpdateTemplateBody, undefined, SheetIdParams>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     sendSuccess(res, 200, await sheetService.updateTemplate(res.locals.validated.params.id, req.user.id, res.locals.validated.body));
 }
 
 export async function deleteSheetTemplate(req: Request, res: Response<void, ValidatedLocals<undefined, undefined, SheetIdParams>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     await sheetService.deleteTemplate(res.locals.validated.params.id, req.user.id);
     res.status(204).send();
 }
 
 export async function listRoomTemplates(req: Request, res: Response<ApiResponse<SheetTemplate[]>, ValidatedLocals<undefined, undefined, { salaId: string }>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     sendSuccess(res, 200, await sheetService.listRoomTemplates(res.locals.validated.params.salaId, req.user.id));
 }
 
 export async function addRoomTemplate(req: Request, res: Response<void, ValidatedLocals<undefined, undefined, RoomTemplateParams>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     await sheetService.addRoomTemplate(res.locals.validated.params.salaId, res.locals.validated.params.templateId, req.user.id);
     res.status(204).send();
 }
 
 export async function removeRoomTemplate(req: Request, res: Response<void, ValidatedLocals<undefined, undefined, RoomTemplateParams>>): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     await sheetService.removeRoomTemplate(res.locals.validated.params.salaId, res.locals.validated.params.templateId, req.user.id);
     res.status(204).send();
@@ -94,7 +94,7 @@ export async function getCharacterSheet(
     req: Request,
     res: Response<ApiResponse<CharacterSheet>, ValidatedLocals<undefined, undefined, SheetIdParams>>,
 ): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     sendSuccess(res, 200, await sheetService.getCharacterSheetById(
         res.locals.validated.params.id,
@@ -106,9 +106,9 @@ export async function createCharacterSheet(
     req: Request,
     res: Response<ApiResponse<CharacterSheet>, ValidatedLocals<CreateSheetBody, undefined, undefined>>,
 ): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
-// Constante ou estado local: `body` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `body` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const body = res.locals.validated.body;
     sendSuccess(res, 201, await sheetService.createSheet({
         usuarioId: req.user.id,
@@ -123,7 +123,7 @@ export async function updateCharacterSheetValues(
     req: Request,
     res: Response<ApiResponse<CharacterSheet>, ValidatedLocals<UpdateValuesBody, undefined, SheetIdParams>>,
 ): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     const { id } = res.locals.validated.params;
     sendSuccess(res, 200, await sheetService.updateSheetValues(id, req.user.id, res.locals.validated.body));
@@ -134,7 +134,7 @@ export async function linkSheetToToken(
     req: Request,
     res: Response<void, ValidatedLocals<LinkSheetBody, undefined, TokenSheetParams>>,
 ): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     const { salaId, tokenId } = res.locals.validated.params;
     await sheetService.linkSheetToToken(salaId, tokenId, res.locals.validated.body.sheetId, req.user.id);
@@ -145,7 +145,7 @@ export async function importCharacterSheet(
     req: Request,
     res: Response<ApiResponse<CharacterSheet>, ValidatedLocals<undefined, undefined, ImportSheetParams>>,
 ): Promise<void> {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     const { salaId, id } = res.locals.validated.params;
     sendSuccess(res, 200, await sheetService.importSheetToRoom(id, salaId, req.user.id));

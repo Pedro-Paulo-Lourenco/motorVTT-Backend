@@ -1,21 +1,21 @@
 /** Descobre e ordena as migrações TypeScript disponíveis no diretório. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { Migration } from './types.js';
 
 export async function loadMigrations(): Promise<readonly Migration[]> {
-// Constante ou estado local: `directory` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `directory` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const directory = fileURLToPath(new URL('./', import.meta.url));
-// Constante ou estado local: `files` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `files` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const files = (await readdir(directory))
         .filter((file) => /^\d+_.+\.(?:js|ts)$/.test(file) && !file.endsWith('.d.ts'))
         .sort();
 
-// Constante ou estado local: `loaded` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `loaded` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const loaded = await Promise.all(files.map(async (file) => {
-// Constante ou estado local: `module` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `module` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const module = await import(pathToFileURL(join(directory, file)).href) as { default: Migration };
         return module.default;
     }));

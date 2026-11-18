@@ -1,5 +1,5 @@
 /** Cria o pool MySQL compartilhado e expõe seu ciclo de vida ao restante da aplicação. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import mysql, { type Pool, type PoolOptions } from 'mysql2/promise';
 
 import { env } from './env.js';
@@ -22,11 +22,11 @@ const poolOptions: PoolOptions = {
 const pool: Pool = mysql.createPool(poolOptions);
 
 export default pool;
-// Encerramento do módulo: reexporta ou torna públicas somente as interfaces escolhidas.
+// Encerramento do módulo: mantém a API do módulo restrita às interfaces que precisam ser consumidas externamente.
 export { pool };
 
 export async function checkDatabaseConnection(): Promise<void> {
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
     await pool.query('SELECT 1');
 }
 

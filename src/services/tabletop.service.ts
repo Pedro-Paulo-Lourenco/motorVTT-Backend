@@ -1,5 +1,5 @@
 /** Persiste snapshots, mensagens e mutações do estado tabletop. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -8,15 +8,15 @@ import {
     RoomStatus,
     boardSchema,
     messageLogSchema,
-// Tipo: `JsonObject` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `JsonObject` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
     type JsonObject,
-// Tipo: `JsonValue` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `JsonValue` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
     type JsonValue,
     sceneSchema,
     tokenSchema,
-// Tipo: `MessageLog` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `MessageLog` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
     type MessageLog,
-// Tipo: `ParticipantRole` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `ParticipantRole` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
     type ParticipantRole as ParticipantRoleValue,
 } from '@motor-vtt/contracts';
 import { z } from 'zod';
@@ -27,22 +27,22 @@ import pool from '../config/database.js';
 import { HttpError } from '../http/errors.js';
 import type { DiceRollResult } from './dice-roller.js';
 
-// Tipo: `Queryable` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `Queryable` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type Queryable = Pool | PoolConnection;
-// Constante ou estado local: `MAX_RECENT_MESSAGES` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `MAX_RECENT_MESSAGES` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const MAX_RECENT_MESSAGES = 50;
-// Exportação principal: `tokenCreateSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `tokenCreateSchema` define a interface pública consumida pelos demais módulos.
 export const tokenCreateSchema = tokenSchema.omit({ id: true, cenaId: true }).strict();
-// Tipo: `TokenCreateInput` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `TokenCreateInput` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type TokenCreateInput = z.infer<typeof tokenCreateSchema>;
-// Tipo: `BoardData` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `BoardData` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type BoardData = z.infer<typeof boardSchema>;
-// Tipo: `SceneData` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `SceneData` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type SceneData = z.infer<typeof sceneSchema>;
-// Exportação principal: `TabletopToken` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `TabletopToken` define a interface pública consumida pelos demais módulos.
 export type TabletopToken = z.infer<typeof tokenSchema>;
 
-// Tipo: `BoardRow` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `BoardRow` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type BoardRow = RowDataPacket & {
     id: string;
     sala_id: string;
@@ -52,7 +52,7 @@ type BoardRow = RowDataPacket & {
     updated_at: Date;
 };
 
-// Tipo: `SceneRow` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `SceneRow` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type SceneRow = RowDataPacket & {
     id: string;
     tabuleiro_id: string;
@@ -64,7 +64,7 @@ type SceneRow = RowDataPacket & {
     updated_at: Date;
 };
 
-// Tipo: `TokenRow` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `TokenRow` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type TokenRow = RowDataPacket & {
     id: string;
     cena_id: string;
@@ -78,7 +78,7 @@ type TokenRow = RowDataPacket & {
     custom_data: unknown;
 };
 
-// Tipo: `MessageRow` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `MessageRow` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type MessageRow = RowDataPacket & {
     id: string;
     sala_id: string;
@@ -90,7 +90,7 @@ type MessageRow = RowDataPacket & {
     created_at: Date;
 };
 
-// Exportação principal: `TabletopState` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `TabletopState` define a interface pública consumida pelos demais módulos.
 export interface TabletopState {
     v: 1;
     roomId: string;
@@ -99,31 +99,31 @@ export interface TabletopState {
     tokens: TabletopToken[];
 }
 
-// Exportação principal: `RoomMembership` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `RoomMembership` define a interface pública consumida pelos demais módulos.
 export interface RoomMembership {
     userId: string;
     role: ParticipantRoleValue;
 }
 
-// Bloco local: `asIso` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `asIso` isola uma responsabilidade reutilizada neste módulo.
 function asIso(value: Date): string {
     return value.toISOString();
 }
 
-// Bloco local: `parseJson` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `parseJson` isola uma responsabilidade reutilizada neste módulo.
 function parseJson(value: unknown): unknown {
     return typeof value === 'string' ? JSON.parse(value) as unknown : value;
 }
 
-// Bloco local: `toJsonValue` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `toJsonValue` isola uma responsabilidade reutilizada neste módulo.
 function toJsonValue(value: unknown): JsonValue {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (typeof value === 'number' && Number.isFinite(value)) return value;
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (Array.isArray(value)) return value.map(toJsonValue);
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (typeof value === 'object') {
         return Object.fromEntries(
             Object.entries(value).map(([key, child]) => [key, toJsonValue(child)]),
@@ -132,9 +132,9 @@ function toJsonValue(value: unknown): JsonValue {
     throw new Error('Metadata de mensagem não é JSON válido.');
 }
 
-// Bloco local: `toJsonObject` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `toJsonObject` isola uma responsabilidade reutilizada neste módulo.
 function toJsonObject(value: unknown): JsonObject {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
         throw new Error('Metadata de mensagem deve ser um objeto JSON.');
     }
@@ -143,11 +143,11 @@ function toJsonObject(value: unknown): JsonObject {
     );
 }
 
-// Bloco local: `toMessageLog` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `toMessageLog` isola uma responsabilidade reutilizada neste módulo.
 function toMessageLog(value: unknown): MessageLog {
-// Constante ou estado local: `parsed` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `parsed` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const parsed = messageLogSchema.parse(value);
-// Constante ou estado local: `metadata` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `metadata` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const metadata = parsed.metadata === undefined ? undefined : toJsonObject(parsed.metadata);
     return {
         id: parsed.id,
@@ -161,7 +161,7 @@ function toMessageLog(value: unknown): MessageLog {
     };
 }
 
-// Bloco local: `toBoard` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `toBoard` isola uma responsabilidade reutilizada neste módulo.
 function toBoard(row: BoardRow): BoardData {
     return boardSchema.parse({
         id: row.id,
@@ -173,7 +173,7 @@ function toBoard(row: BoardRow): BoardData {
     });
 }
 
-// Bloco local: `toScene` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `toScene` isola uma responsabilidade reutilizada neste módulo.
 function toScene(row: SceneRow): SceneData {
     return sceneSchema.parse({
         id: row.id,
@@ -187,9 +187,9 @@ function toScene(row: SceneRow): SceneData {
     });
 }
 
-// Bloco local: `toToken` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `toToken` isola uma responsabilidade reutilizada neste módulo.
 function toToken(row: TokenRow): TabletopToken {
-// Constante ou estado local: `customData` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `customData` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const customData = parseJson(row.custom_data);
     return tokenSchema.parse({
         id: row.id,
@@ -205,7 +205,7 @@ function toToken(row: TokenRow): TabletopToken {
     });
 }
 
-// Exportação principal: `TabletopService` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `TabletopService` define a interface pública consumida pelos demais módulos.
 export class TabletopService {
     public constructor(private readonly database: Pool = pool) {}
 
@@ -218,9 +218,9 @@ export class TabletopService {
              LIMIT 1`,
             [roomId, RoomStatus.ATIVA, userId],
         );
-// Constante ou estado local: `participant` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `participant` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const participant = rows[0];
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (!participant) {
             throw new HttpError(404, 'ROOM_NOT_FOUND', 'Sala não encontrada.');
         }
@@ -256,7 +256,7 @@ export class TabletopService {
         roll?: DiceRollResult,
     ): Promise<MessageLog> {
         await this.getRoomMembership(roomId, userId);
-// Constante ou estado local: `message` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `message` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const message = toMessageLog({
             id: randomUUID(),
             salaId: roomId,
@@ -293,9 +293,9 @@ export class TabletopService {
              ORDER BY created_at ASC LIMIT 1`,
             [roomId],
         );
-// Constante ou estado local: `boardRow` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `boardRow` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const boardRow = boardRows[0];
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (!boardRow?.cena_ativa_id) {
             throw new Error('A cena inicial da sala não está disponível.');
         }
@@ -305,9 +305,9 @@ export class TabletopService {
              FROM scenes WHERE id = ? LIMIT 1`,
             [boardRow.cena_ativa_id],
         );
-// Constante ou estado local: `sceneRow` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `sceneRow` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const sceneRow = sceneRows[0];
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (!sceneRow) throw new Error('A cena inicial da sala não está disponível.');
 
         const [tokenRows] = await this.database.query<TokenRow[]>(
@@ -330,20 +330,20 @@ export class TabletopService {
         await this.getRoomMembership(roomId, userId);
         await this.ensureDefaultScene(roomId);
 
-// Constante ou estado local: `connection` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `connection` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const connection = await this.database.getConnection();
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
         try {
             await connection.beginTransaction();
-// Constante ou estado local: `sceneId` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `sceneId` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const sceneId = await this.requireMasterAndActiveScene(connection, roomId, userId);
-// Constante ou estado local: `token` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `token` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const token = tokenSchema.parse({
                 id: randomUUID(),
                 cenaId: sceneId,
                 ...input,
             });
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             await connection.query(
                 `INSERT INTO tokens
                     (id, cena_id, asset_origem_id, character_sheet_id, nome, x, y, escala, status_bar_map, custom_data)
@@ -379,16 +379,16 @@ export class TabletopService {
         y: number,
     ): Promise<TabletopToken> {
         await this.getRoomMembership(roomId, userId);
-// Constante ou estado local: `connection` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `connection` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const connection = await this.database.getConnection();
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
         try {
             await connection.beginTransaction();
-// Constante ou estado local: `sceneId` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `sceneId` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const sceneId = await this.requireMasterAndActiveScene(connection, roomId, userId);
-// Constante ou estado local: `token` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `token` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const token = await this.getTokenInScene(connection, sceneId, tokenId, true);
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             await connection.query('UPDATE tokens SET x = ?, y = ? WHERE id = ?', [x, y, tokenId]);
             await connection.commit();
             return tokenSchema.parse({ ...token, x, y });
@@ -406,15 +406,15 @@ export class TabletopService {
         tokenId: string,
     ): Promise<{ id: string; sceneId: string }> {
         await this.getRoomMembership(roomId, userId);
-// Constante ou estado local: `connection` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `connection` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const connection = await this.database.getConnection();
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
         try {
             await connection.beginTransaction();
-// Constante ou estado local: `sceneId` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `sceneId` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const sceneId = await this.requireMasterAndActiveScene(connection, roomId, userId);
             await this.getTokenInScene(connection, sceneId, tokenId, true);
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             await connection.query('DELETE FROM tokens WHERE id = ?', [tokenId]);
             await connection.commit();
             return { id: tokenId, sceneId };
@@ -427,37 +427,37 @@ export class TabletopService {
     }
 
     private async ensureDefaultScene(roomId: string): Promise<void> {
-// Constante ou estado local: `connection` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `connection` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const connection = await this.database.getConnection();
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
         try {
             await connection.beginTransaction();
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             const [roomRows] = await connection.query<Array<RowDataPacket & { id: string }>>(
                 'SELECT id FROM rooms WHERE id = ? AND status = ? LIMIT 1 FOR UPDATE',
                 [roomId, RoomStatus.ATIVA],
             );
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
             if (!roomRows[0]) throw new HttpError(404, 'ROOM_NOT_FOUND', 'Sala não encontrada.');
 
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             const [boardRows] = await connection.query<BoardRow[]>(
                 `SELECT id, sala_id, nome, cena_ativa_id, created_at, updated_at
                  FROM boards WHERE sala_id = ? ORDER BY created_at ASC LIMIT 1`,
                 [roomId],
             );
-// Constante ou estado local: `board` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `board` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             let board = boardRows[0];
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
             if (!board) {
-// Constante ou estado local: `boardId` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `boardId` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
                 const boardId = randomUUID();
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
                 await connection.query(
                     'INSERT INTO boards (id, sala_id, nome, cena_ativa_id) VALUES (?, ?, ?, NULL)',
                     [boardId, roomId, 'Tabuleiro principal'],
                 );
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
                 const [createdBoards] = await connection.query<BoardRow[]>(
                     `SELECT id, sala_id, nome, cena_ativa_id, created_at, updated_at
                      FROM boards WHERE id = ? LIMIT 1`,
@@ -465,14 +465,14 @@ export class TabletopService {
                 );
                 board = createdBoards[0];
             }
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
             if (!board) throw new Error('Não foi possível preparar o tabuleiro inicial.');
 
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
             if (board.cena_ativa_id === null) {
-// Constante ou estado local: `sceneId` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `sceneId` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
                 const sceneId = randomUUID();
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
                 await connection.query(
                     `INSERT INTO scenes (id, tabuleiro_id, nome, background_url, grid_config, visivel)
                      VALUES (?, ?, ?, ?, ?, TRUE)`,
@@ -484,7 +484,7 @@ export class TabletopService {
                         JSON.stringify({ enabled: true, size: env.TABLETOP_GRID_SIZE, opacity: 0.5 }),
                     ],
                 );
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
                 await connection.query('UPDATE boards SET cena_ativa_id = ? WHERE id = ?', [sceneId, board.id]);
             }
             await connection.commit();
@@ -501,7 +501,7 @@ export class TabletopService {
         roomId: string,
         userId: string,
     ): Promise<string> {
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
         const [rows] = await connection.query<Array<RowDataPacket & {
             scene_id: string | null;
             papel: ParticipantRoleValue;
@@ -514,15 +514,15 @@ export class TabletopService {
              ORDER BY b.created_at ASC LIMIT 1 FOR UPDATE`,
             [roomId, RoomStatus.ATIVA, userId],
         );
-// Constante ou estado local: `membership` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `membership` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const membership = rows[0];
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (!membership) throw new HttpError(404, 'ROOM_NOT_FOUND', 'Sala não encontrada.');
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (membership.papel !== ParticipantRole.MESTRE) {
             throw new HttpError(403, 'MASTER_REQUIRED', 'Somente o mestre pode alterar tokens.');
         }
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (!membership.scene_id) throw new Error('A cena ativa da sala não está disponível.');
         return membership.scene_id;
     }
@@ -533,20 +533,20 @@ export class TabletopService {
         tokenId: string,
         lock: boolean,
     ): Promise<TabletopToken> {
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
         const [rows] = await connection.query<TokenRow[]>(
             `SELECT id, cena_id, asset_origem_id, character_sheet_id, nome, x, y, escala,
                     status_bar_map, custom_data
              FROM tokens WHERE id = ? AND cena_id = ? LIMIT 1${lock ? ' FOR UPDATE' : ''}`,
             [tokenId, sceneId],
         );
-// Constante ou estado local: `row` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `row` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const row = rows[0];
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (!row) throw new HttpError(404, 'TOKEN_NOT_FOUND', 'Token não encontrado.');
         return toToken(row);
     }
 }
 
-// Exportação principal: `tabletopService` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `tabletopService` define a interface pública consumida pelos demais módulos.
 export const tabletopService = new TabletopService();

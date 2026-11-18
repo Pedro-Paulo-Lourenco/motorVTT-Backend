@@ -1,10 +1,10 @@
 /** Centraliza os envelopes de sucesso e erro retornados pela API. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import type { Response } from 'express';
 
 import type { ApiResponse, HttpLocals } from './types.js';
 
-// Exportação principal: `sendSuccess` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `sendSuccess` define a interface pública consumida pelos demais módulos.
 export function sendSuccess<T>(
     res: Response<ApiResponse<T>, HttpLocals>,
     status: number,
@@ -21,9 +21,9 @@ export function sendSuccess<T>(
         data,
     };
 
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (message !== undefined) response.message = message;
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (res.locals.correlationId !== undefined) {
         response.correlationId = res.locals.correlationId;
     }
@@ -31,7 +31,7 @@ export function sendSuccess<T>(
     res.status(status).json(response);
 }
 
-// Exportação principal: `sendError` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `sendError` define a interface pública consumida pelos demais módulos.
 export function sendError(
     res: Response<ApiResponse<never>, HttpLocals>,
     status: number,
@@ -46,9 +46,9 @@ export function sendError(
         correlationId?: string;
     } = { code, message };
 
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (details !== undefined) error.details = details;
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (res.locals.correlationId !== undefined) {
         error.correlationId = res.locals.correlationId;
     }
