@@ -1,53 +1,53 @@
 /** Define os schemas Zod para templates, fichas e vínculos de tokens. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import { z } from 'zod';
 import { jsonObjectSchema, sheetFieldsSchema, uuidSchema } from '@motor-vtt/contracts';
 
-// Exportação principal: `createTemplateSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `createTemplateSchema` define a interface pública consumida pelos demais módulos.
 export const createTemplateSchema = z.strictObject({
     nome: z.string().trim().min(1).max(160).default('Template Padrão'),
     sistema: z.string().trim().max(80).nullable().optional(),
     salaId: uuidSchema.nullable().optional(),
     camposSchema: sheetFieldsSchema.optional(),
 });
-// Exportação principal: `createSheetSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `createSheetSchema` define a interface pública consumida pelos demais módulos.
 export const createSheetSchema = z.strictObject({
     templateId: uuidSchema,
     nome: z.string().trim().min(1).max(160),
     salaId: uuidSchema.nullable().optional(),
     dadosPreenchidos: jsonObjectSchema.optional(),
 });
-// Exportação principal: `updateTemplateSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `updateTemplateSchema` define a interface pública consumida pelos demais módulos.
 export const updateTemplateSchema = createTemplateSchema.partial();
-// Exportação principal: `sheetIdParamsSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `sheetIdParamsSchema` define a interface pública consumida pelos demais módulos.
 export const sheetIdParamsSchema = z.strictObject({ id: uuidSchema });
-// Exportação principal: `roomIdParamsSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `roomIdParamsSchema` define a interface pública consumida pelos demais módulos.
 export const roomIdParamsSchema = z.strictObject({ salaId: uuidSchema });
-// Exportação principal: `roomTemplateParamsSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `roomTemplateParamsSchema` define a interface pública consumida pelos demais módulos.
 export const roomTemplateParamsSchema = z.strictObject({ salaId: uuidSchema, templateId: uuidSchema });
-// Exportação principal: `updateValuesSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `updateValuesSchema` define a interface pública consumida pelos demais módulos.
 export const updateValuesSchema = jsonObjectSchema;
-// Exportação principal: `linkSheetSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `linkSheetSchema` define a interface pública consumida pelos demais módulos.
 export const linkSheetSchema = z.strictObject({ sheetId: uuidSchema });
-// Exportação principal: `tokenSheetParamsSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `tokenSheetParamsSchema` define a interface pública consumida pelos demais módulos.
 export const tokenSheetParamsSchema = z.strictObject({ salaId: uuidSchema, tokenId: uuidSchema });
-// Exportação principal: `importSheetParamsSchema` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `importSheetParamsSchema` define a interface pública consumida pelos demais módulos.
 export const importSheetParamsSchema = z.strictObject({ salaId: uuidSchema, id: uuidSchema });
-// Exportação principal: `UpdateTemplateBody` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `UpdateTemplateBody` define a interface pública consumida pelos demais módulos.
 export type UpdateTemplateBody = z.infer<typeof updateTemplateSchema>;
-// Exportação principal: `CreateTemplateBody` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `CreateTemplateBody` define a interface pública consumida pelos demais módulos.
 export type CreateTemplateBody = z.infer<typeof createTemplateSchema>;
-// Exportação principal: `CreateSheetBody` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `CreateSheetBody` define a interface pública consumida pelos demais módulos.
 export type CreateSheetBody = z.infer<typeof createSheetSchema>;
-// Exportação principal: `SheetIdParams` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `SheetIdParams` define a interface pública consumida pelos demais módulos.
 export type SheetIdParams = z.infer<typeof sheetIdParamsSchema>;
-// Exportação principal: `RoomTemplateParams` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `RoomTemplateParams` define a interface pública consumida pelos demais módulos.
 export type RoomTemplateParams = z.infer<typeof roomTemplateParamsSchema>;
-// Exportação principal: `UpdateValuesBody` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `UpdateValuesBody` define a interface pública consumida pelos demais módulos.
 export type UpdateValuesBody = z.infer<typeof updateValuesSchema>;
-// Exportação principal: `LinkSheetBody` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `LinkSheetBody` define a interface pública consumida pelos demais módulos.
 export type LinkSheetBody = z.infer<typeof linkSheetSchema>;
-// Exportação principal: `TokenSheetParams` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `TokenSheetParams` define a interface pública consumida pelos demais módulos.
 export type TokenSheetParams = z.infer<typeof tokenSheetParamsSchema>;
-// Exportação principal: `ImportSheetParams` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `ImportSheetParams` define a interface pública consumida pelos demais módulos.
 export type ImportSheetParams = z.infer<typeof importSheetParamsSchema>;

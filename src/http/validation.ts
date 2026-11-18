@@ -1,16 +1,16 @@
 /** Constrói o middleware que valida body, query e parâmetros com Zod. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import type { RequestHandler } from 'express';
 import type { z } from 'zod';
 
 import type { ValidationMiddleware, ValidatedLocals } from './types.js';
 
-// Tipo: `AnySchema` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `AnySchema` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type AnySchema = z.ZodTypeAny;
-// Tipo: `Output` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `Output` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type Output<T> = T extends AnySchema ? z.infer<T> : undefined;
 
-// Exportação principal: `validate` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `validate` define a interface pública consumida pelos demais módulos.
 export function validate<
     BodySchema extends AnySchema | undefined = undefined,
     QuerySchema extends AnySchema | undefined = undefined,
@@ -25,7 +25,7 @@ export function validate<
     Output<ParamsSchema>
 > {
     const middleware: RequestHandler = (req, res, next) => {
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
         try {
             res.locals.validated = {
                 body: schemas.body?.parse(req.body),
@@ -45,7 +45,7 @@ export function validate<
     >;
 }
 
-// Exportação principal: `ValidatedRequest` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `ValidatedRequest` define a interface pública consumida pelos demais módulos.
 export type ValidatedRequest<Body, Query, Params> = ValidatedLocals<
     Body,
     Query,

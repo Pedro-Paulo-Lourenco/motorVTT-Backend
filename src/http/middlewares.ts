@@ -1,5 +1,5 @@
 /** Contém middlewares transversais de rastreabilidade, 404 e erros. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import { randomUUID } from 'node:crypto';
 
 import type { ErrorRequestHandler, RequestHandler } from 'express';
@@ -8,16 +8,16 @@ import { z } from 'zod';
 import { sendError } from './response.js';
 import { HttpError } from './errors.js';
 
-// Exportação principal: `correlationId` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `correlationId` define a interface pública consumida pelos demais módulos.
 export const correlationId: RequestHandler = (req, res, next) => {
-// Constante ou estado local: `incoming` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `incoming` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const incoming = req.header('x-correlation-id')?.trim();
     res.locals.correlationId = incoming || randomUUID();
     res.setHeader('x-correlation-id', res.locals.correlationId);
     next();
 };
 
-// Exportação principal: `notFound` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `notFound` define a interface pública consumida pelos demais módulos.
 export const notFound: RequestHandler = (req, res) => {
     sendError(
         res,
@@ -27,7 +27,7 @@ export const notFound: RequestHandler = (req, res) => {
     );
 };
 
-// Bloco local: `zodDetails` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `zodDetails` isola uma responsabilidade reutilizada neste módulo.
 function zodDetails(error: z.ZodError): Record<string, unknown> {
     return {
         issues: error.issues.map((issue) => ({
@@ -38,27 +38,27 @@ function zodDetails(error: z.ZodError): Record<string, unknown> {
     };
 }
 
-// Exportação principal: `errorHandler` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `errorHandler` define a interface pública consumida pelos demais módulos.
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (error instanceof z.ZodError) {
         sendError(res, 422, 'VALIDATION_ERROR', 'Dados da requisição inválidos.', zodDetails(error));
         return;
     }
 
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (error instanceof SyntaxError && 'body' in error) {
         sendError(res, 400, 'INVALID_JSON', 'O corpo da requisição contém JSON inválido.');
         return;
     }
 
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (error instanceof HttpError) {
         sendError(res, error.statusCode, error.code, error.message, error.details);
         return;
     }
 
-// Constante ou estado local: `isProduction` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `isProduction` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const isProduction = process.env.NODE_ENV === 'production';
     sendError(
         res,

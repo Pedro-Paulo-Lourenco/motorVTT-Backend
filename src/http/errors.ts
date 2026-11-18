@@ -1,5 +1,5 @@
 /** Declara o erro HTTP conhecido, preservando status e código para o handler. */
-// Exportação principal: `HttpError` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `HttpError` define a interface pública consumida pelos demais módulos.
 export class HttpError extends Error {
     public readonly statusCode: number;
     public readonly code: string;
@@ -15,7 +15,7 @@ export class HttpError extends Error {
         this.name = 'HttpError';
         this.statusCode = statusCode;
         this.code = code;
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (details !== undefined) this.details = details;
     }
 }

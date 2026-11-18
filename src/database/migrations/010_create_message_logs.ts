@@ -1,11 +1,11 @@
 /** Cria o histórico persistido de mensagens das salas. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import type { Migration } from './types.js';
 
 const migration: Migration = {
     name: '010_create_message_logs',
     async up(connection) {
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
         await connection.query(`
             CREATE TABLE message_logs (
                 id CHAR(36) NOT NULL,
@@ -26,7 +26,7 @@ const migration: Migration = {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
     },
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
     async down(connection) { await connection.query('DROP TABLE message_logs'); },
 };
 

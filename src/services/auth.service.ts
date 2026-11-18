@@ -1,5 +1,5 @@
 /** Implementa hashing, emissão, rotação e revogação das credenciais. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 import bcrypt from 'bcryptjs';
@@ -18,10 +18,10 @@ import type {
     RegisterInput,
 } from '../types/auth.types.js';
 
-// Tipo: `Queryable` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `Queryable` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type Queryable = Pool | PoolConnection;
 
-// Tipo: `UserRow` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `UserRow` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type UserRow = RowDataPacket & {
     id: string;
     nome: string;
@@ -33,7 +33,7 @@ type UserRow = RowDataPacket & {
     password_hash?: string | null;
 };
 
-// Tipo: `SessionRow` descreve o formato estruturado usado nas operações relacionadas.
+// Contrato de dados: `SessionRow` documenta o formato e o significado dos dados trocados entre as camadas relacionadas.
 type SessionRow = RowDataPacket & {
     session_id: string;
     user_id: string;
@@ -48,30 +48,30 @@ type SessionRow = RowDataPacket & {
     updated_at: Date;
 };
 
-// Exportação principal: `AccessTokenPayload` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `AccessTokenPayload` define a interface pública consumida pelos demais módulos.
 export type AccessTokenPayload = {
     userId: string;
     sessionId: string;
 };
 
-// Exportação principal: `VerifiedAccessTokenPayload` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `VerifiedAccessTokenPayload` define a interface pública consumida pelos demais módulos.
 export type VerifiedAccessTokenPayload = AccessTokenPayload & { expiresAt: number };
 
-// Constante ou estado local: `BCRYPT_COST` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `BCRYPT_COST` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const BCRYPT_COST = 12;
 
-// Used only to keep unknown-email login attempts computationally comparable.
-// Constante ou estado local: `DUMMY_PASSWORD_HASH` mantém o dado necessário ao fluxo abaixo.
+// Mantém o custo computacional de tentativas com e-mail inexistente semelhante ao de e-mails válidos, reduzindo enumeração por tempo de resposta.
+// Estado intermediário: `DUMMY_PASSWORD_HASH` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const DUMMY_PASSWORD_HASH = '$2b$12$2E6ERKF9l/grbZlE6CzadOvPFfr3AbA/4YfCEqWhj6UKNZ6LD2j3K';
 
-// Bloco local: `hashPassword` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `hashPassword` isola uma responsabilidade reutilizada neste módulo.
 async function hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, BCRYPT_COST);
 }
 
-// Bloco local: `verifyPassword` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `verifyPassword` isola uma responsabilidade reutilizada neste módulo.
 async function verifyPassword(hash: string, password: string): Promise<boolean> {
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
     try {
         return await bcrypt.compare(password, hash);
     } catch {
@@ -79,12 +79,12 @@ async function verifyPassword(hash: string, password: string): Promise<boolean> 
     }
 }
 
-// Bloco local: `asIso` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `asIso` isola uma responsabilidade reutilizada neste módulo.
 function asIso(value: Date): string {
     return value.toISOString();
 }
 
-// Bloco local: `toPublicUser` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `toPublicUser` isola uma responsabilidade reutilizada neste módulo.
 function toPublicUser(row: UserRow | SessionRow): PublicUser {
     return userSchema.parse({
         id: row.id,
@@ -97,34 +97,34 @@ function toPublicUser(row: UserRow | SessionRow): PublicUser {
     });
 }
 
-// Bloco local: `durationToMilliseconds` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `durationToMilliseconds` isola uma responsabilidade reutilizada neste módulo.
 function durationToMilliseconds(value: string): number {
-// Constante ou estado local: `match` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `match` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const match = /^(\d+)([smhd])$/.exec(value);
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
     if (!match) throw new Error('Duração de token inválida.');
-// Constante ou estado local: `amount` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `amount` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const amount = Number(match[1]);
-// Constante ou estado local: `unit` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `unit` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const unit = match[2];
-// Constante ou estado local: `multiplier` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `multiplier` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const multiplier = unit === 's' ? 1_000 : unit === 'm' ? 60_000 : unit === 'h' ? 3_600_000 : 86_400_000;
     return amount * multiplier;
 }
 
-// Bloco local: `refreshTokenHash` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `refreshTokenHash` isola uma responsabilidade reutilizada neste módulo.
 function refreshTokenHash(token: string): string {
     return createHash('sha256').update(token).digest('hex');
 }
 
-// Bloco local: `isDuplicateKey` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `isDuplicateKey` isola uma responsabilidade reutilizada neste módulo.
 function isDuplicateKey(error: unknown): boolean {
     return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ER_DUP_ENTRY';
 }
 
-// Bloco local: `findUserByEmail` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `findUserByEmail` isola uma responsabilidade reutilizada neste módulo.
 async function findUserByEmail(connection: Queryable, email: string): Promise<UserRow | undefined> {
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
     const [rows] = await connection.query<UserRow[]>(`
         SELECT u.id, u.nome, u.email, u.status, u.ultimo_login, u.created_at, u.updated_at, c.password_hash
         FROM users u
@@ -135,9 +135,9 @@ async function findUserByEmail(connection: Queryable, email: string): Promise<Us
     return rows[0];
 }
 
-// Bloco local: `findUserById` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `findUserById` isola uma responsabilidade reutilizada neste módulo.
 async function findUserById(connection: Queryable, id: string): Promise<UserRow | undefined> {
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
     const [rows] = await connection.query<UserRow[]>(`
         SELECT u.id, u.nome, u.email, u.status, u.ultimo_login, u.created_at, u.updated_at
         FROM users u
@@ -147,11 +147,11 @@ async function findUserById(connection: Queryable, id: string): Promise<UserRow 
     return rows[0];
 }
 
-// Bloco local: `createRefreshSession` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `createRefreshSession` isola uma responsabilidade reutilizada neste módulo.
 async function createRefreshSession(connection: Queryable, userId: string): Promise<RefreshSession> {
-// Constante ou estado local: `refreshToken` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `refreshToken` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const refreshToken = randomBytes(48).toString('base64url');
-// Constante ou estado local: `expiresAt` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `expiresAt` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const expiresAt = new Date(Date.now() + durationToMilliseconds(env.REFRESH_TOKEN_EXPIRES_IN));
     const session: RefreshSession = {
         id: randomUUID(),
@@ -160,7 +160,7 @@ async function createRefreshSession(connection: Queryable, userId: string): Prom
         expiresAt,
     };
 
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
     await connection.query(
         'INSERT INTO auth_sessions (id, user_id, refresh_token_hash, expires_at) VALUES (?, ?, ?, ?)',
         [session.id, session.userId, refreshTokenHash(session.refreshToken), session.expiresAt],
@@ -168,12 +168,12 @@ async function createRefreshSession(connection: Queryable, userId: string): Prom
     return session;
 }
 
-// Bloco local: `createAuthenticationResult` concentra uma responsabilidade reutilizada dentro deste módulo.
+// Função auxiliar: `createAuthenticationResult` isola uma responsabilidade reutilizada neste módulo.
 function createAuthenticationResult(user: PublicUser, session: RefreshSession): {
     response: AuthServiceResponse;
     session: RefreshSession;
 } {
-// Constante ou estado local: `accessTokenExpiresAt` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `accessTokenExpiresAt` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const accessTokenExpiresAt = new Date(Date.now() + durationToMilliseconds(env.JWT_EXPIRES_IN));
     const options: SignOptions = {
         algorithm: 'HS256',
@@ -182,7 +182,7 @@ function createAuthenticationResult(user: PublicUser, session: RefreshSession): 
         audience: 'motor-vtt-api',
         expiresIn: env.JWT_EXPIRES_IN as NonNullable<SignOptions['expiresIn']>,
     };
-// Constante ou estado local: `accessToken` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `accessToken` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const accessToken = jwt.sign(
         { sid: session.id, typ: 'access' },
         env.JWT_SECRET,
@@ -195,31 +195,31 @@ function createAuthenticationResult(user: PublicUser, session: RefreshSession): 
     };
 }
 
-// Exportação principal: `accessTokenLifetimeMilliseconds` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `accessTokenLifetimeMilliseconds` define a interface pública consumida pelos demais módulos.
 export function accessTokenLifetimeMilliseconds(): number {
     return durationToMilliseconds(env.JWT_EXPIRES_IN);
 }
 
-// Exportação principal: `refreshTokenLifetimeMilliseconds` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `refreshTokenLifetimeMilliseconds` define a interface pública consumida pelos demais módulos.
 export function refreshTokenLifetimeMilliseconds(): number {
     return durationToMilliseconds(env.REFRESH_TOKEN_EXPIRES_IN);
 }
 
-// Exportação principal: `verifyAccessToken` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `verifyAccessToken` define a interface pública consumida pelos demais módulos.
 export function verifyAccessToken(token: string): VerifiedAccessTokenPayload | undefined {
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
     try {
-// Constante ou estado local: `decoded` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `decoded` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const decoded = jwt.verify(token, env.JWT_SECRET, {
             algorithms: ['HS256'],
             issuer: 'motor-vtt',
             audience: 'motor-vtt-api',
         });
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (typeof decoded === 'string') return undefined;
-// Constante ou estado local: `payload` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `payload` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const payload = decoded as JwtPayload;
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (
             payload.typ !== 'access'
             || typeof payload.sub !== 'string'
@@ -234,47 +234,47 @@ export function verifyAccessToken(token: string): VerifiedAccessTokenPayload | u
     }
 }
 
-// Exportação principal: `AuthService` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `AuthService` define a interface pública consumida pelos demais módulos.
 export class AuthService {
     public constructor(private readonly database: Pool = pool) {}
 
     public async register(input: RegisterInput): Promise<{ response: AuthServiceResponse; session: RefreshSession }> {
-// Constante ou estado local: `passwordHash` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `passwordHash` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const passwordHash = await hashPassword(input.password);
-// Constante ou estado local: `connection` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `connection` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const connection = await this.database.getConnection();
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
         try {
             await connection.beginTransaction();
-// Constante ou estado local: `userId` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `userId` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const userId = randomUUID();
 
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
             try {
                 // TODO(auth): switch this to PENDENTE when e-mail verification is implemented.
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
                 await connection.query(
                     `INSERT INTO users (id, nome, email, status, ultimo_login) VALUES (?, ?, ?, 'ATIVO', NULL)`,
                     [userId, input.nome, input.email],
                 );
             } catch (error) {
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
                 if (isDuplicateKey(error)) {
                     throw new HttpError(409, 'EMAIL_ALREADY_REGISTERED', 'Este e-mail já está cadastrado.');
                 }
                 throw error;
             }
 
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             await connection.query(
                 'INSERT INTO user_credentials (user_id, password_hash) VALUES (?, ?)',
                 [userId, passwordHash],
             );
-// Constante ou estado local: `user` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `user` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const user = await findUserById(connection, userId);
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
             if (!user) throw new Error('Usuário recém-criado não encontrado.');
-// Constante ou estado local: `session` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `session` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const session = await createRefreshSession(connection, userId);
             await connection.commit();
             return createAuthenticationResult(toPublicUser(user), session);
@@ -287,34 +287,34 @@ export class AuthService {
     }
 
     public async login(input: LoginInput): Promise<{ response: AuthServiceResponse; session: RefreshSession }> {
-// Constante ou estado local: `candidate` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `candidate` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const candidate = await findUserByEmail(this.database, input.email);
-// Constante ou estado local: `passwordMatches` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `passwordMatches` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const passwordMatches = candidate?.password_hash
             ? await verifyPassword(candidate.password_hash, input.password)
             : await bcrypt.compare(input.password, DUMMY_PASSWORD_HASH);
 
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (!candidate || !candidate.password_hash || !passwordMatches) {
             throw new HttpError(401, 'CREDENTIALS_INVALID', 'Credenciais inválidas.');
         }
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
         if (candidate.status !== 'ATIVO') {
             throw new HttpError(403, 'ACCOUNT_INACTIVE', 'Esta conta não está ativa.');
         }
 
-// Constante ou estado local: `connection` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `connection` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const connection = await this.database.getConnection();
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
         try {
             await connection.beginTransaction();
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             await connection.query<ResultSetHeader>('UPDATE users SET ultimo_login = CURRENT_TIMESTAMP(3) WHERE id = ?', [candidate.id]);
-// Constante ou estado local: `updatedUser` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `updatedUser` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const updatedUser = await findUserById(connection, candidate.id);
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
             if (!updatedUser) throw new Error('Usuário autenticado não encontrado.');
-// Constante ou estado local: `session` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `session` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const session = await createRefreshSession(connection, candidate.id);
             await connection.commit();
             return createAuthenticationResult(toPublicUser(updatedUser), session);
@@ -327,12 +327,12 @@ export class AuthService {
     }
 
     public async refresh(refreshToken: string): Promise<{ response: AuthServiceResponse; session: RefreshSession }> {
-// Constante ou estado local: `connection` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `connection` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const connection = await this.database.getConnection();
-// Bloco protegido: mantém o fluxo principal e suas finalizações ou tratamentos associados.
+// Tratamento protegido: garante que o recurso seja finalizado e que erros sigam para o fluxo central de tratamento.
         try {
             await connection.beginTransaction();
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             const [rows] = await connection.query<SessionRow[]>(`
                 SELECT s.id AS session_id, s.user_id, s.refresh_token_hash, s.expires_at, s.revoked_at,
                     u.id, u.nome, u.email, u.status, u.ultimo_login, u.created_at, u.updated_at
@@ -341,15 +341,15 @@ export class AuthService {
                 WHERE s.refresh_token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > CURRENT_TIMESTAMP(3)
                 LIMIT 1 FOR UPDATE
             `, [refreshTokenHash(refreshToken)]);
-// Constante ou estado local: `current` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `current` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const current = rows[0];
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
             if (!current || current.status !== 'ATIVO') {
                 throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
             }
-// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
+// Persistência: esta consulta lê ou altera os registros necessários para manter o estado da aplicação consistente.
             await connection.query('UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP(3), last_used_at = CURRENT_TIMESTAMP(3) WHERE id = ?', [current.session_id]);
-// Constante ou estado local: `session` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `session` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const session = await createRefreshSession(connection, current.user_id);
             await connection.commit();
             return createAuthenticationResult(toPublicUser(current), session);
@@ -369,7 +369,7 @@ export class AuthService {
             WHERE s.id = ? AND s.user_id = ? AND s.revoked_at IS NULL AND s.expires_at > CURRENT_TIMESTAMP(3)
             LIMIT 1
         `, [payload.sessionId, payload.userId]);
-// Constante ou estado local: `user` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `user` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
         const user = rows[0];
         return user?.status === 'ATIVO' ? toPublicUser(user) : undefined;
     }
@@ -386,5 +386,5 @@ export class AuthService {
     }
 }
 
-// Exportação principal: `authService` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `authService` define a interface pública consumida pelos demais módulos.
 export const authService = new AuthService();

@@ -1,5 +1,5 @@
 /** Declara as rotas públicas e protegidas do ciclo de autenticação. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import { Router } from 'express';
 
 import { login, logout, me, refresh, register } from '../controllers/auth.controller.js';
@@ -7,7 +7,7 @@ import { validate } from '../http/validation.js';
 import { authenticate } from '../middlewares/authenticate.js';
 import { loginSchema, registerSchema } from './auth.schemas.js';
 
-// Constante ou estado local: `authRouter` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `authRouter` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const authRouter = Router();
 
 authRouter.post('/register', validate({ body: registerSchema }), register);

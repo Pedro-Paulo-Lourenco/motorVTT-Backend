@@ -1,8 +1,8 @@
 /** Carrega, valida e tipa a configuração antes de qualquer efeito de inicialização. */
-// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
+// Dependências deste módulo: cada importação fornece recursos, tipos ou integrações usados na implementação abaixo.
 import { config as loadDotenv } from 'dotenv';
 
-// Constante ou estado local: `environmentFile` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `environmentFile` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const environmentFile = `.env.${process.env.NODE_ENV ?? 'development'}`;
 loadDotenv({
     path: process.env.DOTENV_CONFIG_PATH ?? process.env.dotenv_config_path ?? environmentFile,
@@ -11,19 +11,19 @@ loadDotenv({ path: '.env' });
 
 import { z } from 'zod';
 
-// Constante ou estado local: `optionalNonEmptyString` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `optionalNonEmptyString` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const optionalNonEmptyString = z.preprocess(
     (value) => (value === '' ? undefined : value),
     z.string().min(1).optional(),
 );
 
-// Constante ou estado local: `optionalUrl` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `optionalUrl` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const optionalUrl = z.preprocess(
     (value) => (value === '' ? undefined : value),
     z.string().url().optional(),
 );
 
-// Constante ou estado local: `environmentSchema` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `environmentSchema` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const environmentSchema = z.object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
@@ -67,18 +67,18 @@ const environmentSchema = z.object({
     S3_SECRET_ACCESS_KEY: optionalNonEmptyString,
 });
 
-// Exportação principal: `Environment` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `Environment` define a interface pública consumida pelos demais módulos.
 export type Environment = z.infer<typeof environmentSchema>;
 
-// Constante ou estado local: `result` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `result` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
 const result = environmentSchema.safeParse(process.env);
 
-// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
+// Regra de negócio: a validação abaixo decide se o fluxo pode continuar ou deve retornar antecipadamente.
 if (!result.success) {
-// Constante ou estado local: `details` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `details` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
     const details = result.error.issues
         .map((issue) => {
-// Constante ou estado local: `variable` mantém o dado necessário ao fluxo abaixo.
+// Estado intermediário: `variable` guarda o valor que será validado, transformado ou persistido nas etapas seguintes.
             const variable = issue.path.join('.') || 'configuração';
             return `- ${variable}: ${issue.message}`;
         })
@@ -88,5 +88,5 @@ if (!result.success) {
     process.exit(1);
 }
 
-// Exportação principal: `env` disponibiliza esta responsabilidade para os consumidores deste módulo.
+// API pública do módulo: `env` define a interface pública consumida pelos demais módulos.
 export const env: Environment = result.data;
