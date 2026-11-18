@@ -6,7 +6,7 @@ import type { Migration } from './types.js';
 export async function loadMigrations(): Promise<readonly Migration[]> {
     const directory = fileURLToPath(new URL('./', import.meta.url));
     const files = (await readdir(directory))
-        .filter((file) => /^\d+_.+\.(?:ts|js)$/.test(file))
+        .filter((file) => /^\d+_.+\.(?:js|ts)$/.test(file) && !file.endsWith('.d.ts'))
         .sort();
 
     const loaded = await Promise.all(files.map(async (file) => {
