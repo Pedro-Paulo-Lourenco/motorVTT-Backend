@@ -1,8 +1,11 @@
+/** Cria a associação entre templates de ficha e salas. */
+// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
 import type { Migration } from './types.js';
 
 const migration: Migration = {
     name: '013_create_room_sheet_templates',
     async up(connection) {
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query(`
             CREATE TABLE room_sheet_templates (
                 sala_id CHAR(36) NOT NULL,
@@ -16,12 +19,14 @@ const migration: Migration = {
                     ON DELETE CASCADE ON UPDATE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query(`
             INSERT IGNORE INTO room_sheet_templates (sala_id, template_id)
             SELECT sala_id, id FROM sheet_templates WHERE sala_id IS NOT NULL
         `);
     },
     async down(connection) {
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query('DROP TABLE room_sheet_templates');
     },
 };

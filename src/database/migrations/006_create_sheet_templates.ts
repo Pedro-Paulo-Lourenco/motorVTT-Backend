@@ -1,8 +1,11 @@
+/** Cria templates reutilizáveis de fichas. */
+// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
 import type { Migration } from './types.js';
 
 const migration: Migration = {
     name: '006_create_sheet_templates',
     async up(connection) {
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
         await connection.query(`
             CREATE TABLE sheet_templates (
                 id CHAR(36) NOT NULL,
@@ -23,6 +26,7 @@ const migration: Migration = {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
     },
+// Consulta SQL: acessa ou altera registros no banco conforme parâmetros e condições desta instrução.
     async down(connection) { await connection.query('DROP TABLE sheet_templates'); },
 };
 

@@ -1,3 +1,5 @@
+/** Declara o erro HTTP conhecido, preservando status e código para o handler. */
+// Exportação principal: `HttpError` disponibiliza esta responsabilidade para os consumidores deste módulo.
 export class HttpError extends Error {
     public readonly statusCode: number;
     public readonly code: string;
@@ -13,6 +15,7 @@ export class HttpError extends Error {
         this.name = 'HttpError';
         this.statusCode = statusCode;
         this.code = code;
+// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
         if (details !== undefined) this.details = details;
     }
 }

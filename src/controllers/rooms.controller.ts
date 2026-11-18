@@ -1,3 +1,5 @@
+/** Converte as operações de salas em respostas HTTP padronizadas. */
+// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
 import type { Request, Response } from 'express';
 import type { ParticipantInput, RoomInput } from '@motor-vtt/contracts';
 
@@ -11,7 +13,9 @@ export async function createRoom(
     req: Request,
     res: Response<ApiResponse<RoomInput>, ValidatedLocals<CreateRoomBody, undefined, undefined>>,
 ): Promise<void> {
+// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
+// Constante ou estado local: `room` mantém o dado necessário ao fluxo abaixo.
     const room = await roomsService.createRoom(res.locals.validated.body.nome, req.user.id, res.locals.validated.body.templateId);
     sendSuccess(res, 201, room);
 }
@@ -20,6 +24,7 @@ export async function listRooms(
     req: Request,
     res: Response<ApiResponse<RoomInput[]>>,
 ): Promise<void> {
+// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     sendSuccess(res, 200, await roomsService.listRooms(req.user.id));
 }
@@ -28,7 +33,9 @@ export async function joinRoom(
     req: Request,
     res: Response<ApiResponse<ParticipantInput>, ValidatedLocals<JoinRoomBody, undefined, undefined>>,
 ): Promise<void> {
+// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
+// Constante ou estado local: `participant` mantém o dado necessário ao fluxo abaixo.
     const participant = await roomsService.joinRoom(
         res.locals.validated.body.codigoConvite,
         req.user.id,
@@ -43,6 +50,7 @@ export async function getRoom(
         ValidatedLocals<undefined, undefined, RoomIdParams>
     >,
 ): Promise<void> {
+// Condição: altera o caminho de execução somente quando a regra indicada é verdadeira.
     if (!req.user) throw new HttpError(401, 'UNAUTHORIZED', 'Não autorizado.');
     const { salaId } = res.locals.validated.params;
     sendSuccess(res, 200, await roomsService.getRoomForParticipant(salaId, req.user.id));

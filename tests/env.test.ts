@@ -1,9 +1,13 @@
+/** Garante que configurações inválidas interrompem a inicialização. */
+// Importações: reúnem bibliotecas, tipos e módulos locais usados pelos blocos seguintes.
 import { spawnSync } from 'node:child_process';
 import { describe, it } from 'node:test';
 
 import assert from 'node:assert/strict';
 
+// Grupo de testes: reúne cenários que exercitam uma mesma área do comportamento.
 describe('configuração de ambiente', () => {
+// Caso de teste: valida um comportamento específico e suas expectativas.
     it('aplica defaults locais e exporta valores tipados', async () => {
         const { env } = await import('../src/config/env.js');
 
@@ -15,7 +19,9 @@ describe('configuração de ambiente', () => {
         assert.equal(env.STORAGE_DRIVER, 'local');
     });
 
+// Caso de teste: valida um comportamento específico e suas expectativas.
     it('encerra o processo e lista variáveis inválidas', () => {
+// Constante ou estado local: `result` mantém o dado necessário ao fluxo abaixo.
         const result = spawnSync(
             process.execPath,
             ['--import', 'tsx', '-e', "import './src/config/env.ts'"],
@@ -33,6 +39,7 @@ describe('configuração de ambiente', () => {
         );
 
         assert.equal(result.status, 1);
+// Constante ou estado local: `output` mantém o dado necessário ao fluxo abaixo.
         const output = `${result.stdout}${result.stderr}`;
         assert.match(output, /NODE_ENV/);
         assert.match(output, /PORT/);
